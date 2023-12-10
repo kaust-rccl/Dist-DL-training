@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-#SBATCH --time=01:0:0
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
 #SBATCH --ntasks-per-node=4
@@ -8,8 +8,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --constraint=a100
 #SBATCH --cpus-per-task=14
-#SBATCH --account=ibex-cs
-#SBATCH --reservation=A100
+#SBATCH --reservation=DS-TRAINING
 
  
 #ad environment which has Jupyter installed. It can be one of the following:
@@ -19,10 +18,11 @@
 
 # setup the environment
 # You can use the machine learning module 
-#module load machine_learning/2022.11
+module load dl
+module load pytorch
 
 # or you can activate the conda environment directly by uncommenting the following lines
-source /ibex/ai/home/$USER/miniconda3/bin/activate dist-pytorch
+
 
 export DATA_DIR=/ibex/ai/reference/CV/tinyimagenet
 # setup ssh tunneling
