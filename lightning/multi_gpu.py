@@ -146,8 +146,8 @@ class CLASSIFY_lit_module(pl.LightningModule):
         acc = (outputs.argmax(dim=-1) == labels).float().mean()
 
         # Logs the accuracy per epoch to tensorboard (weighted average over batches)
-        self.log("train_acc", acc, on_step=False, on_epoch=True)
-        self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_acc", acc, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("train_loss", loss, on_step=False, on_epoch=True, sync_dist=True)
         return loss  # Return tensor to call ".backward" on
 
     def validation_step(self, batch, batch_idx):
@@ -155,7 +155,7 @@ class CLASSIFY_lit_module(pl.LightningModule):
         outputs = self.model(inputs).argmax(dim=-1)
         acc = (labels == outputs).float().mean()
         # By default logs it per epoch (weighted average over batches)
-        self.log("val_acc", acc,on_step=False, on_epoch=True)
+        self.log("val_acc", acc,on_step=False, on_epoch=True,sync_dist=True)
 
 
 def main(args):
