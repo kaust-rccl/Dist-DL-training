@@ -1,24 +1,20 @@
 #!/bin/bash
 #SBATCH --ntasks=4
 #SBATCH --ntasks-per-node=2
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=8
 #SBATCH --gpus=4
 #SBATCH --gpus-per-node=2
-#SBATCH --constraint=a100
-#SBATCH --time=00:30:00
+#SBATCH --time=00:10:00
 #SBATCH --reservation=DS-TRAINING
 
 
-#source /ibex/ai/home/$USER/miniconda3/bin/activate dist-pytorch
 module load dl
 module load pytorch
 
 export NCCL_DEBUG=INFO
-#export NCCL_SOCKET_IFNAME=ib0
 export PYTHONFAULTHANDLER=1
 
-export DATA_DIR=/ibex/ai/reference/CV/ILSVR/classification-localization/data/jpeg
-#export DATA_DIR=/ibex/ai/reference/CV/tinyimagenet
+export DATA_DIR=/ibex/ai/reference/CV/tinyimagenet
 
 
 export NV_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
@@ -32,5 +28,5 @@ node=$(hostname -s)
 time -p srun python multi_gpu.py --epochs=2 \
                          --num-nodes=${SLURM_NNODES} \
                          --gpus-per-node=${SLURM_GPUS_PER_NODE} \
-                         --num-workers=10  \
+                         --num-workers=${SLURM_CPUS_PER_TASK}  \
                          --precision=32

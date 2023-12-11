@@ -49,7 +49,7 @@ do
       python -m torch.distributed.launch --use_env \
      --nproc_per_node=${SLURM_GPUS_PER_NODE} --nnodes=${SLURM_NNODES} --node_rank=${i} \
      --master_addr=${master_ip} --master_port=${master_port} \
-     ddp.py --epochs=5 --lr=0.001 --num-workers=${SLURM_CPUS_PER_TASK} --batch-size=64 &
+     multi_gpu.py --epochs=5 --lr=0.001 --num-workers=${SLURM_CPUS_PER_TASK} --batch-size=64 &
 done
 wait
 
