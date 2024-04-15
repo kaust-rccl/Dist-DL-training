@@ -22,7 +22,7 @@ mkdir -p $RUNDIR
 export DATA_DIR="/scratch/shaima0d/bandwidth/datasets"
 
 
-batch_size=32
+batch_size=256
 epochs=5
 workers=${SLURM_CPUS_PER_TASK}
 
