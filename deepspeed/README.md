@@ -242,3 +242,56 @@ Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculat
  - `awk` sums and averages the memory values.
 ---
 
+# DeepSpeed-Zero on Single Node Single GPU:
+
+## DeepSpeed Configuration File:
+
+The DeepSpeed config file [ds_config.json](deepspeed-single-gpu/ds_config.json) is the central interface through which you control how DeepSpeed integrates with your training pipeline. It acts like a blueprint that tells DeepSpeed how to optimize and manage.
+### Parameter Descriptions
+
+| **Key**                          | **Value**         | **Description**                                                                 |
+|----------------------------------|-------------------|---------------------------------------------------------------------------------|
+| `train_batch_size`              | `"auto"`          | Automatically sets the largest batch size that fits into GPU memory.           |
+| `gradient_accumulation_steps`   | `"auto"`          | Automatically determines the number of accumulation steps to simulate larger batch sizes. |
+| `gradient_clipping`             | `1.0`             | Caps gradient norms to prevent exploding gradients and ensure training stability. |
+| `optimizer.type`                | `"AdamW"`         | Optimizer used for training; AdamW is standard for transformer models.         |
+| `optimizer.params.lr`           | `5e-5`            | Learning rate used for fine-tuning.                                            |
+| `optimizer.params.betas`        | `[0.9, 0.999]`    | Beta values used by Adam optimizer for momentum calculations.                  |
+| `optimizer.params.eps`          | `1e-8`            | Small constant added to prevent division by zero during optimization.          |
+| `optimizer.params.weight_decay` | `0.01`            | Regularization parameter to prevent overfitting.                               |
+| `fp16.enabled`                  | `true`            | Enables Automatic Mixed Precision (AMP) for faster and more memory-efficient training. |
+
+[Official documentation for DeepSpeed Configuration JSON]( https://www.deepspeed.ai/docs/config-json/)
+
+## Turning the Baseline into a DeepSpeed-Enabled Trainer
+
+In the baseline setup, the `Trainer` uses Hugging Face’s standard training loop without any DeepSpeed optimizations.
+
+To integrate DeepSpeed into the training pipeline, the `TrainingArguments` class must reference a DeepSpeed configuration file `ds_config.json`. This allows Hugging Face's Trainer to apply DeepSpeed's optimization features during training.
+
+### Modification to `TrainingArguments`
+To enable DeepSpeed, a single line is added:
+```python
+    deepspeed="./ds_config.json",  # Links the DeepSpeed configuration file
+```
+**This integration allows DeepSpeed to handle aspects such as:**
+
+- Mixed-precision training (FP16)
+
+- Gradient accumulation and clipping
+
+- Optimizer configuration
+
+## Running the Script with DeepSpeed
+
+Once the `deepspeed` field is added to the `TrainingArguments` configuration, the training process must be launched using the **DeepSpeed CLI launcher** instead of the standard **Python** command. 
+This ensures that DeepSpeed initializes properly and applies all runtime optimizations defined in `ds_config.json`.
+
+In the slurm script, replace
+```commandline
+python train.py
+```
+with
+```commandline
+deepspeed train.py
+```

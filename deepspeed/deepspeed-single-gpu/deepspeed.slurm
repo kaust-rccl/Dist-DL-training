@@ -20,7 +20,7 @@ nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total --format=cs
 MEMORY_LOG_PID=$!
 
 
-# Run the training script using Python
+# Run the training script using deepspeed
 python train.py
 
 # Stop logging
