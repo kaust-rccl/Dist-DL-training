@@ -26,6 +26,28 @@ DeepSpeed is a deep learning optimization library from Microsoft designed to:
 
 - Work seamlessly with **Hugging Face Transformers**.
 
+## What is Hugging Face 🤗?
+
+**Hugging Face** is an open-source ecosystem built around natural language processing (NLP) and machine learning models — especially transformer-based models like BERT, GPT, and BLOOM.
+
+It provides easy-to-use tools to **download, train, fine-tune, and deploy** state-of-the-art models with just a few lines of code.
+### 🔧 Key Components You'll Use
+
+| Component    | What It Does                                                                 |
+|--------------|-------------------------------------------------------------------------------|
+|`transformers` | Python library for accessing thousands of pre-trained models across NLP, vision, and audio tasks. |
+|`datasets`    | Library for easy loading, sharing, and preprocessing of public datasets like SQuAD, IMDB, and more. |
+|`Trainer` API | High-level training interface to handle training, evaluation, and checkpointing with minimal code. |
+| Model Hub    | Online platform for hosting, sharing, and downloading models — all ready to use. |
+
+---
+In this workshop, you’ll:
+
+- Use `transformers` to load a pre-trained **BLOOM** model.
+- Use `datasets` to load and preprocess a **SQuAD** subset.
+- Fine-tune the model on a **question-answering task** using the `Trainer` API.
+- Later, enhance scalability using **DeepSpeed** for memory- and compute-efficient training.
+
 ## Learning Outcomes
 
 ### By the end of this exercise, participants will be able to:
@@ -52,15 +74,6 @@ conda activate deepspeed-finetune
 
 **Step 2: Install Required Packages**
 
-- Manual installation:
-    ```commandline
-    pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
-    pip install transformers==4.51.2
-    pip install deepspeed==0.16.5
-    pip install accelerate==1.6.0
-    pip install datasets==3.4.1
-    ```
-
 - Installation through the [requirements.txt](./requirements.txt):
     ```commandline
     pip install -r requirements.txt
@@ -71,10 +84,10 @@ conda activate deepspeed-finetune
 
 ## Fine-Tuning Setup
 
-before exploring `DeepSpeed` optimizations, it’s useful to understand the vanilla `HuggingFace` fine-tuning process using a smaller LLM like `bigscience/bloom-560m`, and 500 examples subset of `SQuAD` for question-answer format training.
+Before exploring `DeepSpeed` optimizations, it’s useful to understand the vanilla `HuggingFace` fine-tuning process using a smaller LLM like `bigscience/bloom-560m`, and 500 examples subset of `SQuAD` for question-answer format training.
 
 ### Model Loader and Saver
-[model.py](baseline/model.py) Defines two key functions:
+[model.py](baseline/model.py) defines two key functions:
 
 1. `load_model()`: Loads `bigscience/bloom-560m` model and tokenizer.
 
@@ -82,7 +95,7 @@ before exploring `DeepSpeed` optimizations, it’s useful to understand the vani
 
 ### Dataset Preprocessing
 
-[data_loader.py](baseline/data_loader.py) Handles:
+[data_loader.py](baseline/data_loader.py) Handels:
 
 1. Loading the SQuAD dataset using Hugging Face datasets.
 
@@ -97,7 +110,7 @@ before exploring `DeepSpeed` optimizations, it’s useful to understand the vani
 5. Optionally subsetting the dataset for faster experiment.
 
 ### Training Configuration
-[config.py](baseline/config.py) Centralizes hyperparameters makes tuning and experimenting easier — change config values in one file without touching the training script.
+[config.py](baseline/config.py) centralizes hyperparameters makes tuning and experimenting easier — change config values in one file without touching the training script.
 This section defines the core training hyperparameters and behaviors using the Hugging Face 
 - `output_dir`:`./bloom-qa-finetuned`	Directory to store model checkpoints, logs, and evaluation results.
 - `eval_strategy`:`epoch`	Evaluation is run at the end of each training epoch.
