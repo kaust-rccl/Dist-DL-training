@@ -161,7 +161,7 @@ After the run finishes, you'll find:
 
 - Training logs including evaluation metrics and loss curves
 
-- SLURM log files in the `logs` directory or as specified by --output
+- SLURM log files in the `log` directory or as specified by --output
 
 ##  Exercise: Recreate the Baseline Training & Evaluation Summary Table
 
@@ -170,7 +170,7 @@ As part of this workshop, your task is to **run the baseline fine-tuning experim
 This exercise helps you develop a habit of tracking key metrics like training loss, evaluation loss, and throughput — which are essential for understanding and debugging model training.
 
 
-### Objective
+### Objective 1
 
 After running `train.py`, fill in the following table with metrics from your output:
 
@@ -188,7 +188,44 @@ After running `train.py`, fill in the following table with metrics from your out
 
 ### 🔍 Where to Find These Values
 
-- **Loss values** appear in the `.out` files located in `logs` directory , in lines containing `loss=` or `eval_loss=`.
+- **Loss values** appear in the `.out` files located in `log` directory , in lines containing `loss=` or `eval_loss=`.
 - **Training and evaluation speed** are typically printed after evaluation steps or at the end of training.
 
+### Objective 2
+
+Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculate and fill in the table below.
+
+| **Metric**                    | **Your Value (MiB)**     |
+|-------------------------------|---------------------------|
+| Peak GPU Memory Usage         | _Use max value_           |
+| Mean GPU Memory Usage         | _Average across samples_  |
+| Minimum GPU Memory Usage      | _Lowest recorded_         |
+
+### 🔍 Instructions
+
+ - Extract Peak Memory (MiB)
+    ```commandline 
+      tail -n +2 baseline-single-gpu_memory_log.csv | cut -d',' -f4 | sort -n | tail -1
+
+    ```
+ -  Extract Minimum Memory (MiB)
+    ```commandline
+    tail -n +2 baseline-500-1gpu_memory_log.csv | cut -d',' -f4 | sort -n | head -1
+    
+    ```
+ - Extract Mean Memory (MiB)
+    ```commandline
+    tail -n +2 baseline-500-1gpu_memory_log.csv | cut -d',' -f4 | awk '{sum+=$1} END {print sum/NR}'
+    
+    ```
+   ### Explanation
+
+ - `tail -n +2` skips the header line.
+
+ - `cut -d',' -f4` selects the memory.used [MiB] column.
+
+ - `sort -n` sorts numerically.
+
+ - `awk` sums and averages the memory values.
 ---
+
