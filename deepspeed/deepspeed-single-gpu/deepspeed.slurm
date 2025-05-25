@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=baseline--bloom-finetune  # Name of the job shown in SLURM queue
+#SBATCH --job-name=deepspeed-bloom-finetune  # Name of the job shown in SLURM queue
 #SBATCH --gpus=1                             # Request 1 GPU
 #SBATCH --mem=32G                            # Request 32 GB of system memory
 #SBATCH --constraint=v100                   # Specify V100 GPU (optional constraint)
@@ -15,13 +15,13 @@ module load cuda/12.4.1
 
 # Start memory logging in background
 # Log GPU memory usage every 5 seconds to a CSV file
-nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total --format=csv,nounits -l 5 > baseline-single-gpu_memory_log.csv &
+nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total --format=csv,nounits -l 5 > deepspeed-single-gpu_memory_log.csv &
 # Store background logging process ID so it can be killed later
 MEMORY_LOG_PID=$!
 
 
 # Run the training script using deepspeed
-python train.py
+deepspeed train.py
 
 # Stop logging
 # Kill the background logging process after training completes
