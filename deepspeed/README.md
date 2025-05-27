@@ -606,16 +606,17 @@ This exercise focuses on evaluating the impact of enabling pinned memory in offl
 
 Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, with and without pinned memory.
 
-| **Model and Data**         | **Pinned Memory** | **Peak GPU Memory (MiB)** | **Peak CPU Memory (MiB)** | **Total Runtime** |
-|----------------------------|-------------------|----------------------------|----------------------------|--------------------|
-| Bloom 560M, 500 subset     | `pin_memory: true`  |                            |                            |                    |
-| Bloom 560M, 500 subset     | `pin_memory: false` |                            |                            |                    |
+| **Model and Data**     | **Pinned Memory**   | **Peak GPU Memory (MiB)** | **Peak CPU Memory (MiB)** | **Total Runtime** |
+|------------------------|---------------------|---------------------------|---------------------------|-------------------|
+| Bloom 560M, 500 subset | `pin_memory: true`  |                           |                           |                   |
+| Bloom 560M, 500 subset | `pin_memory: false` |                           |                           |                   |
 
 #### Quiz Questions:
 
 **Did enabling `pin_memory: true` reduce runtime in Stage 2 + offloading?**  
-   → If so, by how much?
+→ If so, by how much?
 ---
+
 ### Part 2: Recreate the ZeRO Stage Comparison Table
 
 #### How to Change Model and Dataset Subset Size
@@ -624,28 +625,35 @@ This section explains how to modify the model and dataset subset to perform benc
 
 #### Changing the Model
 
-To change the model being fine-tuned (e.g., from `bloom-560m` to `bloom-3b` or `bloom-7b`), update the model name in the script where `load_model()` is defined.
+To change the model being fine-tuned (e.g., from `bloom-560m` to `bloom-3b` or `bloom-7b`), update the model name in the
+script where `load_model()` is defined.
 
 Open [model.py](deepspeed-single-gpu/model.py) or wherever the model is loaded and find this line:
 
 ```python
 MODEL_NAME = "bigscience/bloom-560m"
 ```
+
 Replace it with one of the following:
+
 ```python
-MODEL_NAME = "bigscience/bloom-3b"   # 3 billion parameter version
-MODEL_NAME = "bigscience/bloom-7b"   # 7 billion parameter version
+MODEL_NAME = "bigscience/bloom-3b"  # 3 billion parameter version
+MODEL_NAME = "bigscience/bloom-7b"  # 7 billion parameter version
 
 ```
+
 #### Changing the Dataset Subset Size
 
 To avoid using the full SQuAD dataset (which can be large), the dataset loader supports subsetting.
 
 In [train.py](deepspeed-single-gpu/train.py), locate the `load_squad()` function:
+
 ```python
 tokenized_datasets = load_squad(subset_size=500)
 ```
+
 To use a larger dataset, change the value to 10000, for example:
+
 ```python
 tokenized_datasets = load_squad(subset_size=1000)
 ```
@@ -658,7 +666,9 @@ tokenized_datasets = load_squad(subset_size=1000)
 | `bloom-3b`   | 10,000 samples | Stage 2, Stage 3, each with offloading                      |
 | `bloom-7b`   | 10,000 samples | Stage 3 with offloading only (Stage 2 likely OOM)           |
 
-#### Fill in the table below using the memory logs (`nvidia-smi`, `psrecord`) and timing results for each ZeRO stage configuration.
+#### Fill in the table below using the memory logs (`nvidia-smi`,
+
+`psrecord`) and timing results for each ZeRO stage configuration.
 
 | **Model and Data** | **DeepSpeed Config** | **Peak GPU Memory Used (MiB)** | **Peak CPU Memory Used (MiB)** | **Total RunTime** |
 |--------------------|----------------------|-------------------------------:|-------------------------------:|-------------------|
@@ -668,9 +678,156 @@ tokenized_datasets = load_squad(subset_size=1000)
 
 Use your completed memory and runtime benchmark tables to answer the following questions for each part.
 
-1. Which ZeRO stage gave the lowest peak GPU memory usage on each bloom variation? 
+1. Which ZeRO stage gave the lowest peak GPU memory usage on each bloom variation?
 
-2. How does runtime change when offloading is enabled?  
+2. How does runtime change when offloading is enabled?
 
 ---
 
+## DeepSpeed-Zero on Single Node Multi GPUs:
+
+This section describes how to adapt a single-GPU DeepSpeed setup to fine-tune a large model (e.g., BLOOM-1.7B) across
+multiple GPUs on one node.
+
+### Setting-up Multi GPUs Training:
+
+To recreate this multi-GPU fine-tuning setup for BLOOM-1.7B using DeepSpeed, you'll begin with your working single-GPU
+Hugging Face + DeepSpeed setup and make a few targeted changes. Below is a full explanation of the required
+modifications and an overview of how DeepSpeed handles GPU sharding.
+
+#### Step 1: Adjust [SLURM](deepspeed-single-gpu/deepspeed.slurm) Configuration:
+
+```commandline
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=2
+```
+
+- `--nodes=1`: Run on one compute node.
+
+- `--ntasks-per-node=1`: Only one task (process) launched per node; DeepSpeed handles spawning processes per GPU
+  internally.
+
+- `--gpus-per-node=16`: Allocate 2 GPUs on the node.
+
+#### Step 2: Set up DeepSpeed master address and port:
+
+Place these lines before the training command in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
+
+```commandline
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
+export MASTER_PORT=9999 # Any free port; if 9999 is busy, try 6000 or 2500
+export WORLD_SIZE=$SLURM_GPUS_ON_NODE
+export RANK=0
+export LOCAL_RANK=0
+```
+
+These environment variables configure distributed training manually.
+
+- `MASTER_ADDR`: IP or hostname of main node (for NCCL initialization).
+
+- `MASTER_PORT`: Any free port for rendezvous (e.g., 9999; if that is in use, ports like 6000 or 2500 often work).
+
+- `WORLD_SIZE`: Total number of GPUs (set automatically by SLURM).
+
+- `RANK` and LOCAL_RANK: Needed for some custom multi-node setups.
+
+#### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
+
+```commandline
+deepspeed --num_gpus=$SLURM_GPUS_ON_NODE train.py &
+```
+
+- `--num_gpus=$SLURM_GPUS_ON_NODE` Instructs DeepSpeed to spawn one worker per GPU.
+
+- Make sure [ds_config.json](deepspeed-single-gpu/ds_config.json) has `"train_batch_size": "auto"`  — DeepSpeed will
+  scale automatically across GPUs.
+
+---
+
+## Exercise: Benchmarking Multi-GPU DataParallel Training
+
+### Part 1: Benchmarking Weak Scaling on Multi-GPU Setup
+
+This exercise walks through how to measure and tabulate key training metrics for `BLOOM-1.7B` on a 10 000-sample subset,
+using DeepSpeed’s DataParallel (no ZeRO) across 2, 4, 6, and 8 GPUs.
+
+Run the same training script with `#SBATCH --gpus-per-node=N` for **N = 2, 4, 6, 8**, then record:
+
+- **Train Runtime** (total seconds)
+- **Steps/sec** (extracted from logs or computed)
+- **Samples/sec** (`Steps/sec × per_device_train_batch_size × N`)
+- **Train Loss** (final)
+- **Eval Loss** (final)
+- **Eval Speed** (samples/sec during evaluation)
+- **Peak GPU Memory** (per GPU)
+
+In a **weak scaling** exercise, the dataset size grows proportionally with the number of GPUs, so that each GPU
+processes the same amount of data. For example, if the base is 10 000 samples per GPU:
+
+- **2 GPUs** → 20 000 samples
+- **4 GPUs** → 40 000 samples
+- **6 GPUs** → 60 000 samples
+- **8 GPUs** → 80 000 samples
+
+### Fill in the results for each GPU count below.
+
+| **Metric**               | **2 GPUs** | **4 GPUs** | **6 GPUs** | **8 GPUs** |
+|--------------------------|-----------:|-----------:|-----------:|-----------:|
+| Train Runtime (sec)      |            |            |            |            |
+| Steps/sec                |            |            |            |            |
+| Samples/sec              |            |            |            |            |
+| Train Loss               |            |            |            |            |
+| Eval Loss (final)        |            |            |            |            |
+| Eval Speed (samples/sec) |            |            |            |            |
+| Peak GPU Memory (MiB)    |            |            |            |            |
+| Average GPU Memory (MiB) |            |            |            |            |
+
+#### Quiz Questions
+
+1. Given weak scaling, should **Peak GPU Memory** per GPU remain constant? Explain any deviations you observe.
+
+> **Note on Code Versioning and SLURM Queues**  
+> SLURM does **not** snapshot your Python scripts when you call `sbatch`.
+> - The job will execute whatever version of `train.py` (or any other `.py` files) is on disk **at the moment the job
+    actually starts** running, not when it was submitted.
+> - Any edits made to your code while the job is still in the queue will be picked up automatically.
+> 
+> **Best Practices:** 
+> Submit from a dedicated directory that won’t be modified.  
+> This ensures reproducibility and avoids unintended changes in long-running or queued jobs.  
+---
+
+### part 2: 2-GPU ZeRO Stage Comparison
+
+This exercise guides the measurement and comparison of training metrics for ZeRO Stages 1, 2, 3 on **2 GPUs**, each 
+**with** and **without** CPU offloading.
+Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and **without** CPU offloading.
+
+| **Metric**               | **Stage 1** | **Stage 1 + offload** | **Stage 2** | **Stage 2 + offload** | **Stage 3** | **Stage 3 + offload** |
+|--------------------------|------------:|----------------------:|------------:|----------------------:|------------:|----------------------:|
+| Train Runtime (sec)      |             |                       |             |                       |             |                       |
+| Steps/sec                |             |                       |             |                       |             |                       |
+| Samples/sec              |             |                       |             |                       |             |                       |
+| Train Loss               |             |                       |             |                       |             |                       |
+| Eval Loss (final)        |             |                       |             |                       |             |                       |
+| Eval Speed (samples/sec) |             |                       |             |                       |             |                       |
+| Peak GPU Memory (MiB)    |             |                       |             |                       |             |                       |
+| Average GPU Memory (MiB) |             |                       |             |                       |             |                       |
+| Peak CPU Memory (MiB)    |             |                       |             |                       |             |                       |
+| Average CPU Memory (MiB) |             |                       |             |                       |             |                       |
+
+#### Quiz Questions
+
+1. How does enabling offloading affect **Train Runtime** and **Samples/sec**? Quantify the trade-off between memory savings and speed.  
+
+Fill in the table below to compare each ZeRO stage **with** and **without** offloading. Calculate both absolute and percentage changes.
+
+| **Stage** | **GPU Mem (No Offload)** | **GPU Mem (Offload)** | **Mem Savings (%)** | **Train Runtime (No Offload)** | **Train Runtime (Offload)** | **Runtime Δ (%)** |
+|-----------|--------------------------|-----------------------|---------------------|--------------------------------|-----------------------------|-------------------|
+| Stage 1   |                          |                       |                     |                                |                             |                   |
+| Stage 2   |                          |                       |                     |                                |                             |                   |
+| Stage 3   |                          |                       |                     |                                |                             |                   |
+
+- **Mem Savings (%)** = `(GPU Mem No Offload – GPU Mem Offload) / GPU Mem No Offload × 100`  
+- **Runtime Δ (%)** = `(Runtime Offload – Runtime No Offload) / Runtime No Offload × 100`
