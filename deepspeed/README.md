@@ -867,3 +867,243 @@ Fill in the table below to compare each ZeRO stage **with** and **without** offl
 - **Mem Savings (%)** = `(GPU Mem No Offload – GPU Mem Offload) / GPU Mem No Offload × 100`  
 - **Runtime Δ (%)** = `(Runtime Offload – Runtime No Offload) / Runtime No Offload × 100`
 ---
+## Multi-Node Training with DeepSpeed and torch.distributed
+
+Fine-tuning very large models across multiple nodes typically relies on **passwordless SSH** so that DeepSpeed can launch worker processes on each node automatically. On IBEX clusters, passwordless SSH is disabled for security, so DeepSpeed’s built-in launcher cannot perform the usual remote spawns.
+
+**Workaround:** use PyTorch’s `torch.distributed.run` (formerly `torch.distributed.launch`), which only requires a single process per node and communicates over TCP—no SSH needed.
+
+### Key Changes from Single-Node to Multi-Node
+
+1. **SLURM directives**  
+2. **Master address/port discovery**  
+3. **Per-node process launch** with `torch.distributed.run`  
+4. **`train.py`**: initialize `torch.distributed` manually  
+
+Below is a side-by-side of the relevant sections, with **added/modified lines** annotated.
+
+1. [SLURM](deepspeed-multi-node/deepspeed.slurm) script edits:
+- `SBATCH` directives:
+    ```commandline
+    #SBATCH --nodes=4                   # ← now 4 nodes
+    #SBATCH --ntasks-per-node=1         # ← one task (process) per node
+    #SBATCH --gres=gpu:v100:1           # ← one GPU per task
+    #SBATCH --cpus-per-task=4
+    ```
+- After environment setup lines, determine master node discovery and rendezvous configuration
+   ```commandline
+   # Getting the node names
+   nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
+   nodes_array=($nodes)
+   echo "Node IDs of participating nodes ${nodes_array[*]}"
+        
+   # Get the IP address and set port for MASTER node
+   head_node="${nodes_array[0]}"
+   echo "Getting the IP address of the head node ${head_node}"
+   master_ip=$(srun -n 1 -N 1 --gpus=1 -w ${head_node} /bin/hostname -I | cut -d " " -f 2)
+   master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+   echo "head node is ${master_ip}:${master_port}"
+   ```
+   For multi-node training without passwordless SSH, each process needs to know exactly where and how to connect. This snippet discovers the head node’s network address and a free port dynamically, so that all workers—spawned via torch.distributed.run—can rendezvous correctly.
+
+   - `scontrol` show hostnames `$SLURM_JOB_NODELIST`, reads the list of node hostnames allocated to the job (via the `SLURM` variable `SLURM_JOB_NODELIST`). Returns one hostname per line.
+   - `nodes_array=($nodes)` splits the multiline string in nodes into a `Bash` array, `nodes_array`, so that each element is a single hostname.
+   - `head_node="${nodes_array[0]}"` picks the first element of nodes_array as the master or rendezvous node for distributed setup.
+   - `srun -n 1 -N 1 --gpus=1 -w ${head_node} /bin/hostname -I`, runs hostname -I on the head node under SLURM (via srun), which prints all IP addresses assigned to that machine.
+   - `| cut -d " " -f 2` splits the hostname -I output on spaces (`-d " "`), and selects the second field (`-f 2`), which is typically the primary network interface IP (e.g. 192.168.1.42).
+   - `master_port=$(python -c '…')` launches a short Python one-liner that:
+       - Creates a TCP socket.
+
+       - Binds it to port 0 (meaning “choose any free port”).
+
+       - Prints the assigned port number (getsockname()[1]).
+
+       - Closes the socket.
+          
+       This ensures a free rendezvous port is picked at runtime.
+- Detailed Explanation: Per-Node Process Launch and GPU Memory Logging
+   ```bash
+   logdir=./gpus_usage/4-nodes
+   mkdir -p "$logdir"
+        
+   # Loop over all allocated nodes and launch exactly one training process per node
+   for (( i=0; i< ${SLURM_NNODES}; i++ ))
+   do
+       srun \
+         -N1 -n1 \
+         -c ${SLURM_CPUS_PER_TASK} \
+         --gpus=${SLURM_GPUS_PER_NODE} \
+         -w ${nodes_array[$i]} \
+         bash -c "
+           # Capture the hostname for this node
+           hostname=\$(hostname)
+        
+           # Start GPU memory logging on this node in the background:
+           # - Queries timestamp, GPU index, GPU name, used & total memory (MiB)
+           # - Samples every 5 seconds
+           nvidia-smi \
+             --query-gpu=timestamp,index,name,memory.used,memory.total \
+             --format=csv,nounits -l 5 \
+                  > \"$logdir/gpu_memory_log_\${hostname}.csv\" &
+        
+           # Save the PID of the nvidia-smi logger so it can be terminated later
+           MEMORY_LOG_PID=\$!
+        
+           # Launch the distributed training process on this node:
+           python -m torch.distributed.run \
+             --nnodes=$SLURM_JOB_NUM_NODES \           # Total number of nodes in the job
+             --nproc_per_node=1 \                       # One process per node (using 1 GPU)
+             --node_rank=$i \                           # This node's rank (0..NNODES-1)
+             --rdzv_endpoint=$master_ip:$master_port \  # Rendezvous server address
+             train.py                                   # Entrypoint script
+       " &
+   done
+        
+   # Wait for all backgrounded training and logging tasks to finish
+   wait
+        
+   # After training completes, stop the GPU memory logger
+   kill $MEMORY_LOG_PID
+   ```
+  ### Step-by-Step Breakdown
+
+  1. **`logdir` and `mkdir -p`**  
+     - Defines `./gpus_usage/4-nodes` as the directory for per-node GPU logs.  
+     - `mkdir -p` creates it if it doesn’t exist (no error if it already does).
+
+  2. **`for (( i=0; i<${SLURM_NNODES}; i++ ))`**  
+     - Iterates over each node index `i` (0-based) allocated to the job.
+
+  3. **`srun -N1 -n1 -c ${SLURM_CPUS_PER_TASK} --gpus=${SLURM_GPUS_PER_NODE} -w ${nodes_array[$i]}`**  
+     - **`-N1 -n1`**: Launch exactly one SLURM task on the specified node.  
+     - **`-c ${SLURM_CPUS_PER_TASK}`**: Allocate the given number of CPU cores to that task.  
+     - **`--gpus=${SLURM_GPUS_PER_NODE}`**: Allocate one GPU (or more) per node.  
+     - **`-w ${nodes_array[$i]}`**: Restrict execution to the `i`th node in the list of allocated hosts.
+
+  4. **Inside the subshell (`bash -c "…"`):**  
+     - **`hostname=$(hostname)`**: Captures the current node’s hostname.  
+     - **GPU Logging:**  
+       - Runs `nvidia-smi` every 5 seconds to record timestamp, GPU index, name, used and total memory.  
+       - Outputs to a CSV file named after the hostname.  
+       - Backgrounds this logging process and saves its PID in `MEMORY_LOG_PID`.  
+     - **Distributed Launch:**  
+       - Invokes `python -m torch.distributed.run` with:  
+         - `--nnodes` set to total nodes.  
+         - `--nproc_per_node=1` (one process per node).  
+         - `--node_rank=$i` (this node’s rank).  
+         - `--rdzv_endpoint=$master_ip:$master_port` (rendezvous address).  
+       - Runs `train.py` under this torch.distributed context.
+
+  5. **Backgrounding and `wait`:**  
+     - The entire `srun … bash -c "…"` block is backgrounded so the loop continues immediately.  
+     - A final `wait` pauses the script until **all** backgrounded processes (GPU loggers and training jobs) have completed.
+
+  6. **`kill $MEMORY_LOG_PID`**  
+     - After training finishes, terminates the last recorded GPU memory logger process.  
+     - (If multiple loggers are active, each PID should be tracked and terminated as nee
+
+2. [train.py](deepspeed-multi-node/train.py) script edits:
+
+- At the top of `train.py`, ensure these modules are imported:
+    ```python
+    import os
+    import torch
+    import torch.distributed as dist
+    ```
+- Log the TCP rendezvous parameters, immediately after the imports, insert:
+    ```python
+    # =================================================
+    #  Distributed Initialization Logging (TCP-based)
+    # =================================================
+    print(f"Initializing process group for rank {os.environ.get('RANK')}")
+    print(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
+    print(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
+    
+    ```
+    This will print each worker’s rank, and the MASTER_ADDR:MASTER_PORT it connects to.
+
+
+- Assign the CUDA device, right after logging (and before any NCCL calls), bind the process to its local GPU:
+    ```python
+    # =============================
+    #  Device Assignment
+    # =============================
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    torch.cuda.set_device(local_rank)
+    ```
+  - `LOCAL_RANK` is provided by `SLURM` or `torch.distributed.run`.
+  - `set_device(local_rank)` ensures each process uses its correct GPU.
+
+
+- Verify Initialization
+    Finally, immediately after the init_process_group call, insert:
+    ```python
+    # ======================================
+    #  Verify Process Group Initialization
+    # ======================================
+    if dist.is_initialized():
+        print(f"torch.distributed initialized: "
+              f"rank {dist.get_rank()} / world size {dist.get_world_size()}")
+    ```
+
+## Exercise: Multi‐Node Weak Scaling
+
+This exercise extends the weak‐scaling concept to **multiple nodes**, automatically computing the total dataset size based on the number of GPUs allocated across all nodes.
+
+### Objective
+
+Keep **10 000 samples per GPU** fixed, and increase nodes (and thus GPUs) so the **total dataset** grows proportionally:
+
+- **2 nodes** (1 GPU/node) → 2 GPUs → **20 000** samples  
+- **3 nodes** → 3 GPUs → **30 000** samples  
+- **4 nodes** → 4 GPUs → **40 000** samples  
+- **6 nodes** → 6 GPUs → **60 000** samples  
+
+Each GPU processes the same 10 000-sample “chunk.” Measure how well training time and throughput hold constant as nodes scale.
+
+
+#### Step 1: Auto‐Compute Dataset Size in `train.py`
+
+Add this near the top of [train.py](deepspeed-multi-node/train.py), **after** initializing `torch.distributed` and setting the device:
+
+```python
+import os
+import torch.distributed as dist
+
+# Base number of samples per GPU
+base_size_per_gpu = 10000
+
+# Total number of processes (GPUs) across all nodes
+world_size = dist.get_world_size()
+
+# GPUs per node (from SLURM or fallback to all local GPUs)
+gpus_per_node = int(os.environ.get("SLURM_GPUS_ON_NODE", torch.cuda.device_count()))
+
+# Number of nodes = total GPUs // GPUs per node
+num_nodes = world_size // gpus_per_node
+
+print(f"Running on {num_nodes} nodes × {gpus_per_node} GPUs = {world_size} total GPUs")
+
+# Compute total subset size for weak scaling
+subset_size = base_size_per_gpu * world_size
+print(f"Loading subset_size = {subset_size} examples")
+
+# Load the dataset with the computed subset size
+tokenized_datasets = load_squad(subset_size=subset_size)
+```
+
+### 📋 Table Template: Weak Scaling Across Nodes
+
+Fill in these metrics for **2, 3, 4, and 6 nodes**, where the dataset grows proportionally (10 000 samples per GPU):
+
+| **Metric**                    | **2 nodes (20 000 samples)** | **3 nodes (30 000 samples)** | **4 nodes (40 000 samples)** | **6 nodes (60 000 samples)** |
+|-------------------------------|------------------------------:|------------------------------:|------------------------------:|------------------------------:|
+| Train Runtime (sec)           |                               |                               |                               |                               |
+| Steps/sec                     |                               |                               |                               |                               |
+| Samples/sec                   |                               |                               |                               |                               |
+| Train Loss                    |                               |                               |                               |                               |
+| Eval Loss (final)             |                               |                               |                               |                               |
+| Peak GPU Memory (GiB)         |                               |                               |                               |                               |
+| Average GPU Memory (GiB)      |                               |                               |                               |                               |
+
+---
