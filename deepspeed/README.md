@@ -520,7 +520,9 @@ psrecord:
 
 1. **Background the Training job in [slurm script](deepspeed-single-gpu/deepspeed.slurm):**
     ```
+   # Launch the training script with DeepSpeed in the background
    deepspeed train.py &
+   # Capture the PID of the DeepSpeed training process for later monitoring or cleanup
    TRAIN_PID=$!
    ```
     - The training command is launched **in the background** (`&`) so the script can capture its PID (`$!`).
@@ -529,7 +531,11 @@ psrecord:
 
 2. **Add CPU Memory Monitoring with `psrecord`**:
     ```commandline
+    # Start CPU memory logging in the background for the DeepSpeed process (including its children),
+    # sampling every 5 seconds and writing to the specified log file
     psrecord $TRAIN_PID --include-children --interval 5 --log "deepspeed-cpu-offloading-data-finetune${SLURM_JOB_ID}.txt" &
+    
+    # Capture the PID of the psrecord process so it can be terminated after training finishes
     MONITOR_CPU_PID=$!
     ```
     - `psrecord` tracks memory usage of the training process.
@@ -540,6 +546,7 @@ psrecord:
 
 3. **Wait for the Training to Finish**
     ```
+   # Wait for the DeepSpeed training process to complete before stopping any logging or cleanup
     wait $TRAIN_PID
     ```
     - Ensures the script pauses until training completes.
@@ -548,6 +555,7 @@ psrecord:
 
 4. **Stop Logging Process**
     ```
+   # Stop the CPU memory logging process now that training has finished
     kill $MONITOR_CPU_PID
     ```
     - Cleans up both GPU and CPU memory logging processes after training ends.
@@ -694,15 +702,14 @@ multiple GPUs on one node.
 To recreate this multi-GPU fine-tuning setup for BLOOM-1.7B using DeepSpeed, you'll begin with your working single-GPU
 Hugging Face + DeepSpeed setup and make a few targeted changes. Below is a full explanation of the required
 modifications and an overview of how DeepSpeed handles GPU sharding.
-
+todo: mkdir multigpus
 #### Step 1: Adjust [SLURM](deepspeed-single-gpu/deepspeed.slurm) Configuration:
 
 ```commandline
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=2
+#SBATCH --nodes=1               # Run on one compute node
+#SBATCH --ntasks-per-node=1     # Launch a single task per node; DeepSpeed will spawn one process per GPU
+#SBATCH --gpus-per-node=2       # Allocate two GPUs on this node
 ```
-
 - `--nodes=1`: Run on one compute node.
 
 - `--ntasks-per-node=1`: Only one task (process) launched per node; DeepSpeed handles spawning processes per GPU
@@ -710,16 +717,21 @@ modifications and an overview of how DeepSpeed handles GPU sharding.
 
 - `--gpus-per-node=16`: Allocate 2 GPUs on the node.
 
+remove the line 
+```commandline
+#SBATCH --gpus=1
+```
+
 #### Step 2: Set up DeepSpeed master address and port:
 
 Place these lines before the training command in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
 
 ```commandline
-export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)
-export MASTER_PORT=9999 # Any free port; if 9999 is busy, try 6000 or 2500
-export WORLD_SIZE=$SLURM_GPUS_ON_NODE
-export RANK=0
-export LOCAL_RANK=0
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
+export MASTER_PORT=9999                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 2500)
+export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
+export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
+export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
 ```
 
 These environment variables configure distributed training manually.
@@ -735,6 +747,7 @@ These environment variables configure distributed training manually.
 #### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
 
 ```commandline
+# Launch the training script with DeepSpeed, using all GPUs allocated by SLURM, and run in the background
 deepspeed --num_gpus=$SLURM_GPUS_ON_NODE train.py &
 ```
 
@@ -770,6 +783,27 @@ processes the same amount of data. For example, if the base is 10 000 samples pe
 - **6 GPUs** → 60 000 samples
 - **8 GPUs** → 80 000 samples
 
+#### Automating Weak Scaling in [train.py](deepspeed-single-gpu/train.py)
+
+This snippet shows how to compute the dataset subset size automatically based on the number of GPUs available (weak-scaling mode).
+
+```python
+import os
+
+# Define the base number of samples **per GPU**
+base_size = 10000
+
+# Detect number of GPUs (DeepSpeed / SLURM will set WORLD_SIZE)
+#    Fallback to 1 ifWORLD_SIZE is not set
+num_gpus = int(os.environ.get("WORLD_SIZE", 1))
+
+# Compute total subset size = base_size × num_gpus
+subset_size = base_size * num_gpus
+
+# Load and tokenize only that many examples
+tokenized_datasets = load_squad(subset_size=subset_size)
+```
+
 ### Fill in the results for each GPU count below.
 
 | **Metric**               | **2 GPUs** | **4 GPUs** | **6 GPUs** | **8 GPUs** |
@@ -786,16 +820,7 @@ processes the same amount of data. For example, if the base is 10 000 samples pe
 #### Quiz Questions
 
 1. Given weak scaling, should **Peak GPU Memory** per GPU remain constant? Explain any deviations you observe.
-
-> **Note on Code Versioning and SLURM Queues**  
-> SLURM does **not** snapshot your Python scripts when you call `sbatch`.
-> - The job will execute whatever version of `train.py` (or any other `.py` files) is on disk **at the moment the job
-    actually starts** running, not when it was submitted.
-> - Any edits made to your code while the job is still in the queue will be picked up automatically.
-> 
-> **Best Practices:** 
-> Submit from a dedicated directory that won’t be modified.  
-> This ensures reproducibility and avoids unintended changes in long-running or queued jobs.  
+ 
 ---
 
 ### part 2: 2-GPU ZeRO Stage Comparison
@@ -817,6 +842,16 @@ Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and
 | Peak CPU Memory (MiB)    |             |                       |             |                       |             |                       |
 | Average CPU Memory (MiB) |             |                       |             |                       |             |                       |
 
+> **Note on Code Versioning and SLURM Queues**  
+> SLURM does **not** snapshot your Python scripts when you call `sbatch`.
+> - The job will execute whatever version of `train.py` (or any other `.py` files) is on disk **at the moment the job
+    actually starts** running, not when it was submitted.
+> - Any edits made to your code while the job is still in the queue will be picked up automatically.
+> 
+> **Best Practices:** 
+> Submit from a dedicated directory that won’t be modified.  
+> This ensures reproducibility and avoids unintended changes in long-running or queued jobs. 
+
 #### Quiz Questions
 
 1. How does enabling offloading affect **Train Runtime** and **Samples/sec**? Quantify the trade-off between memory savings and speed.  
@@ -831,3 +866,4 @@ Fill in the table below to compare each ZeRO stage **with** and **without** offl
 
 - **Mem Savings (%)** = `(GPU Mem No Offload – GPU Mem Offload) / GPU Mem No Offload × 100`  
 - **Runtime Δ (%)** = `(Runtime Offload – Runtime No Offload) / Runtime No Offload × 100`
+---
