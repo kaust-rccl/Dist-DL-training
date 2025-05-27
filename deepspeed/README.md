@@ -372,12 +372,12 @@ On **single GPU**, there's no sharding — so optimizer state partitioning won't
 
 #### Integrating ZeRO Stage 1 into Our Implementation:
 
-To enable ZeRO Stage 1, add the following lines to the [ds_config.json](deepspeed-single-gpu/ds_config.json):
+To enable ZeRO Stage 1, update the `"zero_optimization"` lines in the [ds_config.json](deepspeed-single-gpu/ds_config.json) with the following:
 
 ```json
- "zero_optimization": {
-"stage": 1
-}
+  "zero_optimization": {
+    "stage": 1
+  }
 ```
 
 No Python code changes are needed
@@ -396,10 +396,10 @@ To enable Optimizer State Offloading, update the [ds_config.json](deepspeed-sing
 
 ```json
  "zero_optimization": {
-"stage": 1,
-"offload_optimizer": {
-"device": "cpu"
-}
+   "stage": 1,
+   "offload_optimizer": {
+     "device": "cpu"
+   }
 }
 ```
 
@@ -415,9 +415,9 @@ What it adds:
 To enable ZeRO Stage 2, update [ds_config.json](deepspeed-single-gpu/ds_config.json) with:
 
 ```python
-"zero_optimization": {
+  "zero_optimization": {
     "stage": 2
-}
+  }
 ```
 
 No Python code changes are needed
@@ -430,11 +430,11 @@ No Python code changes are needed
 
 ```json
   "zero_optimization": {
-"stage": 2,
-"offload_optimizer": {
-"device": "cpu"
-}
-}
+    "stage": 2,
+    "offload_optimizer": {
+      "device": "cpu"
+    }
+  }
 ```
 
 ### Zero 3 Full Parameter Sharding (No Offloading)
@@ -450,8 +450,8 @@ This stage allows training very large models by distributing:
 
 ```json
   "zero_optimization": {
-"stage": 3
-}
+    "stage": 3
+  }
 ```
 
 #### ZeRO Stage 3: Full Parameter Offloading
@@ -471,14 +471,14 @@ gradient states.
 
 ```json
   "zero_optimization": {
-"stage": 3,
-"offload_optimizer": {
-"device": "cpu"
-},
-"offload_param": {
-"device": "cpu"
-}
-}
+    "stage": 3,
+    "offload_optimizer": {
+      "device": "cpu"
+    },
+    "offload_param": {
+      "device": "cpu"
+    }
+  }
 ```
 
 ### Offloading: Parameters:`pin_memory: true`
@@ -494,20 +494,20 @@ gradient states.
 - Improved data pipeline throughput, especially noticeable in single-GPU training where the offloaded optimizer is
   frequently accessed.
 
-For Both Optimizer and Parameter Offloading (Full CPU Offloading in Stage 3):
+For Both Optimizer and Parameter Offloading:
 
 ```json
-  "offload_optimizer": {
-"device": "cpu",
-"pin_memory": true
-}
+    "offload_optimizer": {
+      "device": "cpu",
+      "pin_memory": true
+    }
 ```
 
 ```json
-  "offload_param": {
-"device": "cpu",
-"pin_memory": true
-}
+    "offload_param": {
+     "device": "cpu",
+     "pin_memory": true
+    }
 ```
 
 ### Tracking CPU Memory Usage
@@ -520,7 +520,7 @@ psrecord:
 
 1. **Background the Training job in [slurm script](deepspeed-single-gpu/deepspeed.slurm):**
     ```
-   deepspeed train_stage3_offload.py &
+   deepspeed train.py &
    TRAIN_PID=$!
    ```
     - The training command is launched **in the background** (`&`) so the script can capture its PID (`$!`).
@@ -546,7 +546,7 @@ psrecord:
     - Prevents premature termination of memory logging processes.
 
 
-4. **Stop All Logging Processes**
+4. **Stop Logging Process**
     ```
     kill $MONITOR_CPU_PID
     ```
