@@ -71,19 +71,12 @@ In this workshop, you’ll:
 
 We'll use Conda to manage packages and dependencies
 
-**Step 1: Create the Conda Environment:**
+run these lines:
 
-```
-conda create -n deepspeed-finetune python=3.10 -y
+```bash
+conda env create -f environment.yml
 conda activate deepspeed-finetune
 ```
-
-**Step 2: Install Required Packages**
-
-- Installation through the [requirements.txt](./requirements.txt):
-    ```commandline
-    pip install -r requirements.txt
-    ```
 
 ----------------------------------
 
@@ -97,7 +90,7 @@ training.
 
 ### Model Loader and Saver
 
-[model.py](baseline/model.py) defines two key functions:
+[model.py](experiments/baseline/model.py) defines two key functions:
 
 1. `load_model()`: Loads `bigscience/bloom-560m` model and tokenizer.
 
@@ -105,7 +98,7 @@ training.
 
 ### Dataset Preprocessing
 
-[data_loader.py](baseline/data_loader.py) Handels:
+[data_loader.py](experiments/baseline/data_loader.py) Handels:
 
 1. Loading the SQuAD dataset using Hugging Face datasets.
 
@@ -121,7 +114,7 @@ training.
 
 ### Training Configuration
 
-[config.py](baseline/config.py) centralizes hyperparameters makes tuning and experimenting easier — change config values
+[config.py](experiments/baseline/config.py) centralizes hyperparameters makes tuning and experimenting easier — change config values
 in one file without touching the training script.
 This section defines the core training hyperparameters and behaviors using the Hugging Face
 
@@ -164,7 +157,7 @@ for you.
 
 ### SLURM Job Submission Script
 
-[baseline.slurm](baseline/baseline.slurm) is used to run the entire experiment on an HPC cluster.
+[baseline.slurm](experiments/baseline/baseline.slurm) is used to run the entire experiment on an HPC cluster.
 
 **Key sections:**
 
@@ -198,7 +191,9 @@ After the run finishes, you'll find:
 - SLURM log files in the `log` directory or as specified by --output
 - GPU memory tracking output with `nvidia-smi` as a `.csv` file
 
-## Exercise: Recreate the Baseline Training & Evaluation Summary Table
+---
+
+## Exercise: Run the Baseline Training & Fill Evaluation Summary Table
 
 As part of this workshop, your task is to **run the baseline fine-tuning experiment** and **recreate the performance
 summary table** using your own training logs.
@@ -206,83 +201,98 @@ summary table** using your own training logs.
 This exercise helps you develop a habit of tracking key metrics like training loss, evaluation loss, and throughput —
 which are essential for understanding and debugging model training.
 
-### Objective 1
+### Part 1: Run the Baseline Fine-Tuning Job
 
-After running `train.py`, fill in the following table with metrics from your output:
+#### Steps:
 
-| **Metric**                     | **Your Value**           |
-|--------------------------------|--------------------------|
-| Train Loss (Final)             | _Fill from final output_ |
-| Eval Loss (Epoch 1)            | _From evaluation logs_   |
-| Eval Loss (Epoch 2)            | _From evaluation logs_   |
-| Eval Loss (Epoch 3)            | _From evaluation logs_   |
-| Training Speed (samples/sec)   | _Reported by Trainer_    |
-| Evaluation Speed (samples/sec) | _Reported by Trainer_    |
-| Steps per Epoch                | _From logs or config_    |
+1. Navigate to the [baseline](experiments/baseline) directory
+    ```bash
+    cd baseline
+    ```
+2. Submit the slurm script [baseline.slurm](experiments/baseline/baseline.slurm)
+    ```bash
+    sbatch baseline.slurm
+    ```
+3. Once the job is terminated, check for the output artifacts:
 
-### 🔍 Where to Find These Values
+   Output logs found in `.out` inside [logs](experiments/baseline/logs) directory, it should be tailed with the slurm job id.
+     ```bash
+     cd logs
+     cat <job_name>_<job_id>.out
+     ```
+    - You will see lines similar to:
+    ```commandline
+   100%|██████████| 93/93 [02:05<00:00,  1.35s/it]
+    {'eval_loss': 1.2965800762176514, 'eval_runtime': 1.2687, 'eval_samples_per_second': 39.41, ... 'epoch': 1.0}
+    {'eval_loss': 1.5810621976852417, 'eval_runtime': 1.269,  'eval_samples_per_second': 39.403, ... 'epoch': 2.0}
+    {'eval_loss': 1.7790133953094482, 'eval_runtime': 1.2682,'eval_samples_per_second': 39.427, ... 'epoch': 2.93}
+    {'train_runtime': 125.2999, 'train_samples_per_second': 11.971, 'train_steps_per_second': 0.742, 'train_loss': 0.7039181288852486, 'epoch': 2.93}
+    Model saved to ./bloom-finetuned
+    ```
+4. Fill the results table:
 
-- **Loss values** appear in the `.out` files located in `log` directory , in lines containing `loss=` or `eval_loss=`.
-- **Training and evaluation speed** are typically printed after evaluation steps or at the end of training.
+   Extract the following metrics from the output log and populate the table below:
+    
+    | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
+    |--------------------------------|-----------------------------------------------------------|----------------|
+    | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
+    | Eval Loss (Epoch 1)            | First `eval_loss` where `'epoch': 1.0`                    |                |
+    | Eval Loss (Epoch 2)            | `eval_loss` where `'epoch': 2.0`                          |                |
+    | Eval Loss (Epoch 3)            | Final `eval_loss` (e.g. where `'epoch': 2.93`)            |                |
+    | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
+    | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
+    | Steps per Epoch                | Similar to the `93/93` shown in the progress bar.         |                |
 
-### Objective 2
+### Part 2: Analyze GPU Memory Usage from Logs
 
 Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculate and fill in the table below.
 
-| **Metric**               | **Your Value (MiB)**     |
-|--------------------------|--------------------------|
-| Peak GPU Memory Usage    | _Use max value_          |
-| Mean GPU Memory Usage    | _Average across samples_ |
-| Minimum GPU Memory Usage | _Lowest recorded_        |
+#### Steps:
 
-#### Understanding GPU Memory Tracking Output with `nvidia-smi`
+1. Locate the log file that tracks GPU memory:
+    ```bash
+    cat baseline-single-gpu-memory-log-<SLURM_JOB_ID>.csv
+    ```
 
-A typical GPU memory log file might look like this:
+2. Understanding GPU memory tracking output with `nvidia-smi`
 
-```commandline
-  timestamp, index, name, memory.used [MiB], memory.total [MiB]
-  2025/05/22 09:42:33.587, 0, Tesla V100-SXM2-32GB, 1, 32768
-  2025/05/22 09:42:38.588, 0, Tesla V100-SXM2-32GB, 4, 32768
-  2025/05/22 09:42:43.588, 0, Tesla V100-SXM2-32GB, 4, 32768
-...
-```
+   A typical GPU memory log file might look like this:
 
-#### Column Descriptions
+    ```commandline
+      timestamp, index, name, memory.used [MiB], memory.total [MiB]
+      2025/05/22 09:42:33.587, 0, Tesla V100-SXM2-32GB, 1, 32768
+      2025/05/22 09:42:38.588, 0, Tesla V100-SXM2-32GB, 4, 32768
+      2025/05/22 09:42:43.588, 0, Tesla V100-SXM2-32GB, 4, 32768
+    ...
+    ```
 
-| **Column**           | **Description**                                                     |
-|----------------------|---------------------------------------------------------------------|
-| `timestamp`          | Time of the memory snapshot.                                        |
-| `index`              | GPU index on the node (e.g. `0` for the first GPU).                 |
-| `name`               | Full name of the GPU device used.                                   |
-| `memory.used [MiB]`  | Amount of GPU memory actively in use at the time of logging.        |
-| `memory.total [MiB]` | Total available memory on the GPU. Helpful for calculating % usage. |
+   #### Column Descriptions
 
-### Instructions to FIll The Table
+   | **Column**           | **Description**                                                     |
+          |----------------------|---------------------------------------------------------------------|
+   | `timestamp`          | Time of the memory snapshot.                                        |
+   | `index`              | GPU index on the node (e.g. `0` for the first GPU).                 |
+   | `name`               | Full name of the GPU device used.                                   |
+   | `memory.used [MiB]`  | Amount of GPU memory actively in use at the time of logging.        |
+   | `memory.total [MiB]` | Total available memory on the GPU. Helpful for calculating % usage. |
 
-- Extract Peak Memory (MiB)
-   ```commandline 
-     tail -n +2 baseline-single-gpu_memory_log.csv | cut -d',' -f4 | sort -n | tail -1
+3. FIll in the table
+    
+    | **Prompt**               | **Shell Command to Run**                                                                 | **Extracted Value (MiB)** |
+    |--------------------------|------------------------------------------------------------------------------------------|----------------------------|
+    | **Peak** memory used?    | `tail -n +2 baseline-500-1gpu_memory_log.csv \| cut -d',' -f4 \| sort -n \| tail -1`     |                            |
+    | **Minimum** memory used? | `tail -n +2 baseline-500-1gpu_memory_log.csv \| cut -d',' -f4 \| sort -n \| head -1`     |                            |
+    | **Mean** memory usage?   | `tail -n +2 baseline-500-1gpu_memory_log.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` |                            |
 
-   ```
-- Extract Minimum Memory (MiB)
-  ```commandline
-  tail -n +2 baseline-500-1gpu_memory_log.csv | cut -d',' -f4 | sort -n | head -1
-  
-  ```
-- Extract Mean Memory (MiB)
-   ```commandline
-   tail -n +2 baseline-500-1gpu_memory_log.csv | cut -d',' -f4 | awk '{sum+=$1} END {print sum/NR}'
-   
-   ```
-  ### Explanation
+    #### Explanation
 
-- `tail -n +2` skips the header line.
+   - `tail -n +2` skips the header line.
 
-- `cut -d',' -f4` selects the memory.used [MiB] column.
+   - `cut -d',' -f4` selects the memory.used [MiB] column.
 
-- `sort -n` sorts numerically.
+   - `sort -n` sorts numerically.
 
-- `awk` sums and averages the memory values.
+   - `awk` sums and averages the memory values.
 
 ---
 
@@ -290,7 +300,7 @@ A typical GPU memory log file might look like this:
 
 ## DeepSpeed Configuration File:
 
-The DeepSpeed config file [ds_config.json](deepspeed-single-gpu/ds_config.json) is the central interface through which
+The DeepSpeed config file [ds_config.json](experiments/deepspeed-single-gpu/ds_config.json) is the central interface through which
 you control how DeepSpeed integrates with your training pipeline. It acts like a blueprint that tells DeepSpeed how to
 optimize and manage.
 
@@ -344,16 +354,16 @@ Once the `deepspeed` field is added to the `TrainingArguments` configuration, th
 using the **DeepSpeed CLI launcher** instead of the standard **Python** command.
 This ensures that DeepSpeed initializes properly and applies all runtime optimizations defined in `ds_config.json`.
 
-In the slurm script, replace
+In the slurm script, adjust
 
-```commandline
+```bash
 python train.py
 ```
 
 with
 
-```commandline
-deepspeed train.py
+```bash
+python train.py --deepspeed ./ds_config.json
 ```
 
 ## ZeRO in DeepSpeed
@@ -372,12 +382,13 @@ On **single GPU**, there's no sharding — so optimizer state partitioning won't
 
 #### Integrating ZeRO Stage 1 into Our Implementation:
 
-To enable ZeRO Stage 1, update the `"zero_optimization"` lines in the [ds_config.json](deepspeed-single-gpu/ds_config.json) with the following:
+To enable ZeRO Stage 1, update the `"zero_optimization"` lines in
+the [ds_config.json](experiments/deepspeed-single-gpu/ds_config.json) with the following:
 
 ```json
   "zero_optimization": {
-    "stage": 1
-  }
+"stage": 1
+}
 ```
 
 No Python code changes are needed
@@ -392,14 +403,14 @@ This is particularly useful for:
 - Single GPU setups with tight memory
 - Larger batch sizes or long sequence lengths
 
-To enable Optimizer State Offloading, update the [ds_config.json](deepspeed-single-gpu/ds_config.json) as follows:
+To enable Optimizer State Offloading, update the [ds_config.json](experiments/deepspeed-single-gpu/ds_config.json) as follows:
 
 ```json
  "zero_optimization": {
-   "stage": 1,
-   "offload_optimizer": {
-     "device": "cpu"
-   }
+"stage": 1,
+"offload_optimizer": {
+"device": "cpu"
+}
 }
 ```
 
@@ -412,12 +423,12 @@ What it adds:
 - Reduces activation memory and gradient memory on each GPU.
 - Makes training larger models possible on limited memory.
 
-To enable ZeRO Stage 2, update [ds_config.json](deepspeed-single-gpu/ds_config.json) with:
+To enable ZeRO Stage 2, update [ds_config.json](experiments/deepspeed-single-gpu/ds_config.json) with:
 
 ```python
   "zero_optimization": {
     "stage": 2
-  }
+}
 ```
 
 No Python code changes are needed
@@ -430,11 +441,11 @@ No Python code changes are needed
 
 ```json
   "zero_optimization": {
-    "stage": 2,
-    "offload_optimizer": {
-      "device": "cpu"
-    }
-  }
+"stage": 2,
+"offload_optimizer": {
+"device": "cpu"
+}
+}
 ```
 
 ### Zero 3 Full Parameter Sharding (No Offloading)
@@ -450,8 +461,8 @@ This stage allows training very large models by distributing:
 
 ```json
   "zero_optimization": {
-    "stage": 3
-  }
+"stage": 3
+}
 ```
 
 #### ZeRO Stage 3: Full Parameter Offloading
@@ -471,14 +482,14 @@ gradient states.
 
 ```json
   "zero_optimization": {
-    "stage": 3,
-    "offload_optimizer": {
-      "device": "cpu"
-    },
-    "offload_param": {
-      "device": "cpu"
-    }
-  }
+"stage": 3,
+"offload_optimizer": {
+"device": "cpu"
+},
+"offload_param": {
+"device": "cpu"
+}
+}
 ```
 
 ### Offloading: Parameters:`pin_memory: true`
@@ -498,16 +509,16 @@ For Both Optimizer and Parameter Offloading:
 
 ```json
     "offload_optimizer": {
-      "device": "cpu",
-      "pin_memory": true
-    }
+"device": "cpu",
+"pin_memory": true
+}
 ```
 
 ```json
     "offload_param": {
-     "device": "cpu",
-     "pin_memory": true
-    }
+"device": "cpu",
+"pin_memory": true
+}
 ```
 
 ### Tracking CPU Memory Usage
@@ -518,7 +529,7 @@ but also CPU memory, since model states or optimizer states can be moved to CPU 
 This section demonstrates how to extend a SLURM job script to track both GPU and CPU memory usage using nvidia-smi and
 psrecord:
 
-1. **Background the Training job in [slurm script](deepspeed-single-gpu/deepspeed.slurm):**
+1. **Background the Training job in [slurm script](experiments/deepspeed-single-gpu/deepspeed.slurm):**
     ```
    # Launch the training script with DeepSpeed in the background
    deepspeed train.py &
@@ -636,7 +647,7 @@ This section explains how to modify the model and dataset subset to perform benc
 To change the model being fine-tuned (e.g., from `bloom-560m` to `bloom-3b` or `bloom-7b`), update the model name in the
 script where `load_model()` is defined.
 
-Open [model.py](deepspeed-single-gpu/model.py) or wherever the model is loaded and find this line:
+Open [model.py](experiments/deepspeed-single-gpu/model.py) or wherever the model is loaded and find this line:
 
 ```python
 MODEL_NAME = "bigscience/bloom-560m"
@@ -654,7 +665,7 @@ MODEL_NAME = "bigscience/bloom-7b"  # 7 billion parameter version
 
 To avoid using the full SQuAD dataset (which can be large), the dataset loader supports subsetting.
 
-In [train.py](deepspeed-single-gpu/train.py), locate the `load_squad()` function:
+In [train.py](experiments/deepspeed-single-gpu/train.py), locate the `load_squad()` function:
 
 ```python
 tokenized_datasets = load_squad(subset_size=500)
@@ -703,32 +714,35 @@ To recreate this multi-GPU fine-tuning setup for BLOOM-1.7B using DeepSpeed, you
 Hugging Face + DeepSpeed setup and make a few targeted changes. Below is a full explanation of the required
 modifications and an overview of how DeepSpeed handles GPU sharding.
 todo: mkdir multigpus
-#### Step 1: Adjust [SLURM](deepspeed-single-gpu/deepspeed.slurm) Configuration:
+
+#### Step 1: Adjust [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) Configuration:
 
 ```commandline
 #SBATCH --nodes=1               # Run on one compute node
 #SBATCH --ntasks-per-node=1     # Launch a single task per node; DeepSpeed will spawn one process per GPU
 #SBATCH --gpus-per-node=2       # Allocate two GPUs on this node
 ```
+
 - `--nodes=1`: Run on one compute node.
 
 - `--ntasks-per-node=1`: Only one task (process) launched per node; DeepSpeed handles spawning processes per GPU
   internally.
 
-- `--gpus-per-node=16`: Allocate 2 GPUs on the node.
+- `--gpus-per-node=2`: Allocate 2 GPUs on the node.
 
-remove the line 
+remove the line
+
 ```commandline
 #SBATCH --gpus=1
 ```
 
 #### Step 2: Set up DeepSpeed master address and port:
 
-Place these lines before the training command in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
+Place these lines before the training command in the [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) script:
 
 ```commandline
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
-export MASTER_PORT=9999                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 2500)
+export MASTER_PORT=9999                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 29500)
 export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
 export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
 export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
@@ -738,13 +752,13 @@ These environment variables configure distributed training manually.
 
 - `MASTER_ADDR`: IP or hostname of main node (for NCCL initialization).
 
-- `MASTER_PORT`: Any free port for rendezvous (e.g., 9999; if that is in use, ports like 6000 or 2500 often work).
+- `MASTER_PORT`: Any free port for rendezvous (e.g., 9999; if that is in use, ports like 6000 or 29500 often work).
 
 - `WORLD_SIZE`: Total number of GPUs (set automatically by SLURM).
 
 - `RANK` and LOCAL_RANK: Needed for some custom multi-node setups.
 
-#### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](deepspeed-single-gpu/deepspeed.slurm) script:
+#### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) script:
 
 ```commandline
 # Launch the training script with DeepSpeed, using all GPUs allocated by SLURM, and run in the background
@@ -753,7 +767,7 @@ deepspeed --num_gpus=$SLURM_GPUS_ON_NODE train.py &
 
 - `--num_gpus=$SLURM_GPUS_ON_NODE` Instructs DeepSpeed to spawn one worker per GPU.
 
-- Make sure [ds_config.json](deepspeed-single-gpu/ds_config.json) has `"train_batch_size": "auto"`  — DeepSpeed will
+- Make sure [ds_config.json](experiments/deepspeed-single-gpu/ds_config.json) has `"train_batch_size": "auto"`  — DeepSpeed will
   scale automatically across GPUs.
 
 ---
@@ -783,9 +797,10 @@ processes the same amount of data. For example, if the base is 10 000 samples pe
 - **6 GPUs** → 60 000 samples
 - **8 GPUs** → 80 000 samples
 
-#### Automating Weak Scaling in [train.py](deepspeed-single-gpu/train.py)
+#### Automating Weak Scaling in [train.py](experiments/deepspeed-single-gpu/train.py)
 
-This snippet shows how to compute the dataset subset size automatically based on the number of GPUs available (weak-scaling mode).
+This snippet shows how to compute the dataset subset size automatically based on the number of GPUs available (
+weak-scaling mode).
 
 ```python
 import os
@@ -820,12 +835,12 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 #### Quiz Questions
 
 1. Given weak scaling, should **Peak GPU Memory** per GPU remain constant? Explain any deviations you observe.
- 
+
 ---
 
 ### part 2: 2-GPU ZeRO Stage Comparison
 
-This exercise guides the measurement and comparison of training metrics for ZeRO Stages 1, 2, 3 on **2 GPUs**, each 
+This exercise guides the measurement and comparison of training metrics for ZeRO Stages 1, 2, 3 on **2 GPUs**, each
 **with** and **without** CPU offloading.
 Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and **without** CPU offloading.
 
@@ -847,16 +862,18 @@ Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and
 > - The job will execute whatever version of `train.py` (or any other `.py` files) is on disk **at the moment the job
     actually starts** running, not when it was submitted.
 > - Any edits made to your code while the job is still in the queue will be picked up automatically.
-> 
-> **Best Practices:** 
+>
+> **Best Practices:**
 > Submit from a dedicated directory that won’t be modified.  
-> This ensures reproducibility and avoids unintended changes in long-running or queued jobs. 
+> This ensures reproducibility and avoids unintended changes in long-running or queued jobs.
 
 #### Quiz Questions
 
-1. How does enabling offloading affect **Train Runtime** and **Samples/sec**? Quantify the trade-off between memory savings and speed.  
+1. How does enabling offloading affect **Train Runtime** and **Samples/sec**? Quantify the trade-off between memory
+   savings and speed.
 
-Fill in the table below to compare each ZeRO stage **with** and **without** offloading. Calculate both absolute and percentage changes.
+Fill in the table below to compare each ZeRO stage **with** and **without** offloading. Calculate both absolute and
+percentage changes.
 
 | **Stage** | **GPU Mem (No Offload)** | **GPU Mem (Offload)** | **Mem Savings (%)** | **Train Runtime (No Offload)** | **Train Runtime (Offload)** | **Runtime Δ (%)** |
 |-----------|--------------------------|-----------------------|---------------------|--------------------------------|-----------------------------|-------------------|
@@ -864,25 +881,31 @@ Fill in the table below to compare each ZeRO stage **with** and **without** offl
 | Stage 2   |                          |                       |                     |                                |                             |                   |
 | Stage 3   |                          |                       |                     |                                |                             |                   |
 
-- **Mem Savings (%)** = `(GPU Mem No Offload – GPU Mem Offload) / GPU Mem No Offload × 100`  
+- **Mem Savings (%)** = `(GPU Mem No Offload – GPU Mem Offload) / GPU Mem No Offload × 100`
 - **Runtime Δ (%)** = `(Runtime Offload – Runtime No Offload) / Runtime No Offload × 100`
+
 ---
+
 ## Multi-Node Training with DeepSpeed and torch.distributed
 
-Fine-tuning very large models across multiple nodes typically relies on **passwordless SSH** so that DeepSpeed can launch worker processes on each node automatically. On IBEX clusters, passwordless SSH is disabled for security, so DeepSpeed’s built-in launcher cannot perform the usual remote spawns.
+Fine-tuning very large models across multiple nodes typically relies on **passwordless SSH** so that DeepSpeed can
+launch worker processes on each node automatically. On IBEX clusters, passwordless SSH is disabled for security, so
+DeepSpeed’s built-in launcher cannot perform the usual remote spawns.
 
-**Workaround:** use PyTorch’s `torch.distributed.run` (formerly `torch.distributed.launch`), which only requires a single process per node and communicates over TCP—no SSH needed.
+**Workaround:** use PyTorch’s `torch.distributed.run` (formerly `torch.distributed.launch`), which only requires a
+single process per node and communicates over TCP—no SSH needed.
 
 ### Key Changes from Single-Node to Multi-Node
 
-1. **SLURM directives**  
-2. **Master address/port discovery**  
-3. **Per-node process launch** with `torch.distributed.run`  
-4. **`train.py`**: initialize `torch.distributed` manually  
+1. **SLURM directives**
+2. **Master address/port discovery**
+3. **Per-node process launch** with `torch.distributed.run`
+4. **`train.py`**: initialize `torch.distributed` manually
 
 Below is a side-by-side of the relevant sections, with **added/modified lines** annotated.
 
-1. [SLURM](deepspeed-multi-node/deepspeed.slurm) script edits:
+1. [SLURM](experiments/deepspeed-multi-node/deepspeed.slurm) script edits:
+
 - `SBATCH` directives:
     ```commandline
     #SBATCH --nodes=4                   # ← now 4 nodes
@@ -904,23 +927,30 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
    master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
    echo "head node is ${master_ip}:${master_port}"
    ```
-   For multi-node training without passwordless SSH, each process needs to know exactly where and how to connect. This snippet discovers the head node’s network address and a free port dynamically, so that all workers—spawned via torch.distributed.run—can rendezvous correctly.
+  For multi-node training without passwordless SSH, each process needs to know exactly where and how to connect. This
+  snippet discovers the head node’s network address and a free port dynamically, so that all workers—spawned via
+  torch.distributed.run—can rendezvous correctly.
 
-   - `scontrol` show hostnames `$SLURM_JOB_NODELIST`, reads the list of node hostnames allocated to the job (via the `SLURM` variable `SLURM_JOB_NODELIST`). Returns one hostname per line.
-   - `nodes_array=($nodes)` splits the multiline string in nodes into a `Bash` array, `nodes_array`, so that each element is a single hostname.
-   - `head_node="${nodes_array[0]}"` picks the first element of nodes_array as the master or rendezvous node for distributed setup.
-   - `srun -n 1 -N 1 --gpus=1 -w ${head_node} /bin/hostname -I`, runs hostname -I on the head node under SLURM (via srun), which prints all IP addresses assigned to that machine.
-   - `| cut -d " " -f 2` splits the hostname -I output on spaces (`-d " "`), and selects the second field (`-f 2`), which is typically the primary network interface IP (e.g. 192.168.1.42).
-   - `master_port=$(python -c '…')` launches a short Python one-liner that:
-       - Creates a TCP socket.
+    - `scontrol` show hostnames `$SLURM_JOB_NODELIST`, reads the list of node hostnames allocated to the job (via the
+      `SLURM` variable `SLURM_JOB_NODELIST`). Returns one hostname per line.
+    - `nodes_array=($nodes)` splits the multiline string in nodes into a `Bash` array, `nodes_array`, so that each
+      element is a single hostname.
+    - `head_node="${nodes_array[0]}"` picks the first element of nodes_array as the master or rendezvous node for
+      distributed setup.
+    - `srun -n 1 -N 1 --gpus=1 -w ${head_node} /bin/hostname -I`, runs hostname -I on the head node under SLURM (via
+      srun), which prints all IP addresses assigned to that machine.
+    - `| cut -d " " -f 2` splits the hostname -I output on spaces (`-d " "`), and selects the second field (`-f 2`),
+      which is typically the primary network interface IP (e.g. 192.168.1.42).
+    - `master_port=$(python -c '…')` launches a short Python one-liner that:
+        - Creates a TCP socket.
 
-       - Binds it to port 0 (meaning “choose any free port”).
+        - Binds it to port 0 (meaning “choose any free port”).
 
-       - Prints the assigned port number (getsockname()[1]).
+        - Prints the assigned port number (getsockname()[1]).
 
-       - Closes the socket.
-          
-       This ensures a free rendezvous port is picked at runtime.
+        - Closes the socket.
+
+      This ensures a free rendezvous port is picked at runtime.
 - Detailed Explanation: Per-Node Process Launch and GPU Memory Logging
    ```bash
    logdir=./gpus_usage/4-nodes
@@ -967,42 +997,43 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
    ```
   ### Step-by-Step Breakdown
 
-  1. **`logdir` and `mkdir -p`**  
-     - Defines `./gpus_usage/4-nodes` as the directory for per-node GPU logs.  
-     - `mkdir -p` creates it if it doesn’t exist (no error if it already does).
+    1. **`logdir` and `mkdir -p`**
+        - Defines `./gpus_usage/4-nodes` as the directory for per-node GPU logs.
+        - `mkdir -p` creates it if it doesn’t exist (no error if it already does).
 
-  2. **`for (( i=0; i<${SLURM_NNODES}; i++ ))`**  
-     - Iterates over each node index `i` (0-based) allocated to the job.
+    2. **`for (( i=0; i<${SLURM_NNODES}; i++ ))`**
+        - Iterates over each node index `i` (0-based) allocated to the job.
 
-  3. **`srun -N1 -n1 -c ${SLURM_CPUS_PER_TASK} --gpus=${SLURM_GPUS_PER_NODE} -w ${nodes_array[$i]}`**  
-     - **`-N1 -n1`**: Launch exactly one SLURM task on the specified node.  
-     - **`-c ${SLURM_CPUS_PER_TASK}`**: Allocate the given number of CPU cores to that task.  
-     - **`--gpus=${SLURM_GPUS_PER_NODE}`**: Allocate one GPU (or more) per node.  
-     - **`-w ${nodes_array[$i]}`**: Restrict execution to the `i`th node in the list of allocated hosts.
+    3. **`srun -N1 -n1 -c ${SLURM_CPUS_PER_TASK} --gpus=${SLURM_GPUS_PER_NODE} -w ${nodes_array[$i]}`**
+        - **`-N1 -n1`**: Launch exactly one SLURM task on the specified node.
+        - **`-c ${SLURM_CPUS_PER_TASK}`**: Allocate the given number of CPU cores to that task.
+        - **`--gpus=${SLURM_GPUS_PER_NODE}`**: Allocate one GPU (or more) per node.
+        - **`-w ${nodes_array[$i]}`**: Restrict execution to the `i`th node in the list of allocated hosts.
 
-  4. **Inside the subshell (`bash -c "…"`):**  
-     - **`hostname=$(hostname)`**: Captures the current node’s hostname.  
-     - **GPU Logging:**  
-       - Runs `nvidia-smi` every 5 seconds to record timestamp, GPU index, name, used and total memory.  
-       - Outputs to a CSV file named after the hostname.  
-       - Backgrounds this logging process and saves its PID in `MEMORY_LOG_PID`.  
-     - **Distributed Launch:**  
-       - Invokes `python -m torch.distributed.run` with:  
-         - `--nnodes` set to total nodes.  
-         - `--nproc_per_node=1` (one process per node).  
-         - `--node_rank=$i` (this node’s rank).  
-         - `--rdzv_endpoint=$master_ip:$master_port` (rendezvous address).  
-       - Runs `train.py` under this torch.distributed context.
+    4. **Inside the subshell (`bash -c "…"`):**
+        - **`hostname=$(hostname)`**: Captures the current node’s hostname.
+        - **GPU Logging:**
+            - Runs `nvidia-smi` every 5 seconds to record timestamp, GPU index, name, used and total memory.
+            - Outputs to a CSV file named after the hostname.
+            - Backgrounds this logging process and saves its PID in `MEMORY_LOG_PID`.
+        - **Distributed Launch:**
+            - Invokes `python -m torch.distributed.run` with:
+                - `--nnodes` set to total nodes.
+                - `--nproc_per_node=1` (one process per node).
+                - `--node_rank=$i` (this node’s rank).
+                - `--rdzv_endpoint=$master_ip:$master_port` (rendezvous address).
+            - Runs `train.py` under this torch.distributed context.
 
-  5. **Backgrounding and `wait`:**  
-     - The entire `srun … bash -c "…"` block is backgrounded so the loop continues immediately.  
-     - A final `wait` pauses the script until **all** backgrounded processes (GPU loggers and training jobs) have completed.
+    5. **Backgrounding and `wait`:**
+        - The entire `srun … bash -c "…"` block is backgrounded so the loop continues immediately.
+        - A final `wait` pauses the script until **all** backgrounded processes (GPU loggers and training jobs) have
+          completed.
 
-  6. **`kill $MEMORY_LOG_PID`**  
-     - After training finishes, terminates the last recorded GPU memory logger process.  
-     - (If multiple loggers are active, each PID should be tracked and terminated as nee
+    6. **`kill $MEMORY_LOG_PID`**
+        - After training finishes, terminates the last recorded GPU memory logger process.
+        - (If multiple loggers are active, each PID should be tracked and terminated as nee
 
-2. [train.py](deepspeed-multi-node/train.py) script edits:
+2. [train.py](experiments/deepspeed-multi-node/train.py) script edits:
 
 - At the top of `train.py`, ensure these modules are imported:
     ```python
@@ -1013,33 +1044,33 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
 - Log the TCP rendezvous parameters, immediately after the imports, insert:
     ```python
     # =================================================
-    #  Distributed Initialization Logging (TCP-based)
+    # Distributed Initialization Logging (TCP-based)
     # =================================================
     print(f"Initializing process group for rank {os.environ.get('RANK')}")
     print(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
     print(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
     
     ```
-    This will print each worker’s rank, and the MASTER_ADDR:MASTER_PORT it connects to.
+  This will print each worker’s rank, and the MASTER_ADDR:MASTER_PORT it connects to.
 
 
 - Assign the CUDA device, right after logging (and before any NCCL calls), bind the process to its local GPU:
     ```python
     # =============================
-    #  Device Assignment
+    # Device Assignment
     # =============================
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     torch.cuda.set_device(local_rank)
     ```
-  - `LOCAL_RANK` is provided by `SLURM` or `torch.distributed.run`.
-  - `set_device(local_rank)` ensures each process uses its correct GPU.
+    - `LOCAL_RANK` is provided by `SLURM` or `torch.distributed.run`.
+    - `set_device(local_rank)` ensures each process uses its correct GPU.
 
 
 - Verify Initialization
-    Finally, immediately after the init_process_group call, insert:
+  Finally, immediately after the init_process_group call, insert:
     ```python
     # ======================================
-    #  Verify Process Group Initialization
+    # Verify Process Group Initialization
     # ======================================
     if dist.is_initialized():
         print(f"torch.distributed initialized: "
@@ -1048,23 +1079,25 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
 
 ## Exercise: Multi‐Node Weak Scaling
 
-This exercise extends the weak‐scaling concept to **multiple nodes**, automatically computing the total dataset size based on the number of GPUs allocated across all nodes.
+This exercise extends the weak‐scaling concept to **multiple nodes**, automatically computing the total dataset size
+based on the number of GPUs allocated across all nodes.
 
 ### Objective
 
 Keep **10 000 samples per GPU** fixed, and increase nodes (and thus GPUs) so the **total dataset** grows proportionally:
 
-- **2 nodes** (1 GPU/node) → 2 GPUs → **20 000** samples  
-- **3 nodes** → 3 GPUs → **30 000** samples  
-- **4 nodes** → 4 GPUs → **40 000** samples  
-- **6 nodes** → 6 GPUs → **60 000** samples  
+- **2 nodes** (1 GPU/node) → 2 GPUs → **20 000** samples
+- **3 nodes** → 3 GPUs → **30 000** samples
+- **4 nodes** → 4 GPUs → **40 000** samples
+- **6 nodes** → 6 GPUs → **60 000** samples
 
-Each GPU processes the same 10 000-sample “chunk.” Measure how well training time and throughput hold constant as nodes scale.
-
+Each GPU processes the same 10 000-sample “chunk.” Measure how well training time and throughput hold constant as nodes
+scale.
 
 #### Step 1: Auto‐Compute Dataset Size in `train.py`
 
-Add this near the top of [train.py](deepspeed-multi-node/train.py), **after** initializing `torch.distributed` and setting the device:
+Add this near the top of [train.py](experiments/deepspeed-multi-node/train.py), **after** initializing `torch.distributed` and
+setting the device:
 
 ```python
 import os
@@ -1096,14 +1129,15 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 
 Fill in these metrics for **2, 3, 4, and 6 nodes**, where the dataset grows proportionally (10 000 samples per GPU):
 
-| **Metric**                    | **2 nodes (20 000 samples)** | **3 nodes (30 000 samples)** | **4 nodes (40 000 samples)** | **6 nodes (60 000 samples)** |
-|-------------------------------|------------------------------:|------------------------------:|------------------------------:|------------------------------:|
-| Train Runtime (sec)           |                               |                               |                               |                               |
-| Steps/sec                     |                               |                               |                               |                               |
-| Samples/sec                   |                               |                               |                               |                               |
-| Train Loss                    |                               |                               |                               |                               |
-| Eval Loss (final)             |                               |                               |                               |                               |
-| Peak GPU Memory (GiB)         |                               |                               |                               |                               |
-| Average GPU Memory (GiB)      |                               |                               |                               |                               |
+| **Metric**               | **2 nodes (20 000 samples)** | **3 nodes (30 000 samples)** | **4 nodes (40 000 samples)** | **6 nodes (60 000 samples)** |
+|--------------------------|-----------------------------:|-----------------------------:|-----------------------------:|-----------------------------:|
+| Train Runtime (sec)      |                              |                              |                              |                              |
+| Steps/sec                |                              |                              |                              |                              |
+| Samples/sec              |                              |                              |                              |                              |
+| Train Loss               |                              |                              |                              |                              |
+| Eval Loss (final)        |                              |                              |                              |                              |
+| Peak GPU Memory (GiB)    |                              |                              |                              |                              |
+| Average GPU Memory (GiB) |                              |                              |                              |                              |
 
 ---
+

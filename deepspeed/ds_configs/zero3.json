@@ -15,6 +15,6 @@
     "enabled": true
   },
   "zero_optimization": {
-    "stage": 0
+    "stage": 3
   }
 }

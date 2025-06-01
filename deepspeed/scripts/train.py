@@ -2,6 +2,8 @@ from transformers import Trainer, DataCollatorForLanguageModeling
 from model import load_model, save_model
 from data_loader import load_squad
 from config import TRAINING_ARGS
+import torch
+import torch.distributed as dist
 
 # ============================================
 #  BLOOM Fine-Tuning Script (Baseline Setup)
@@ -31,7 +33,7 @@ model, tokenizer = load_model()
 # Loads a subset of the SQuAD dataset and tokenizes each example as:
 # "Question: ... Context: ... Answer: ..."
 # Labels are aligned with input_ids for causal LM training.
-tokenized_datasets = load_squad(subset_size=500)
+tokenized_datasets = load_squad(subset_size=1000)
 
 # -------------------------------
 # 3. Create Data Collator
@@ -41,15 +43,7 @@ tokenized_datasets = load_squad(subset_size=500)
 # masked language modeling (e.g., BERT) — this is for causal LM (e.g., BLOOM).
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-# -------------------------------
-# 4. Set Up Trainer
-# -------------------------------
-# Trainer handles the full training loop — forward, backward, optimizer step,
-# checkpoint saving, evaluation, and logging. It requires:
-# - model and tokenizer
-# - training/evaluation datasets
-# - training arguments (batch size, epochs, learning rate, etc.)
-# - a data collator to manage padding and batching
+# Define Trainer
 trainer = Trainer(
     model=model,
     args=TRAINING_ARGS,
