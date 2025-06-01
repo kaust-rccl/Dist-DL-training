@@ -529,7 +529,7 @@ but also CPU memory, since model states or optimizer states can be moved to CPU 
 This section demonstrates how to extend a SLURM job script to track both GPU and CPU memory usage using nvidia-smi and
 psrecord:
 
-1. **Background the Training job in [slurm script](experiments/deepspeed-single-gpu/deepspeed.slurm):**
+1. **Background the Training job in [slurm script](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm):**
     ```
    # Launch the training script with DeepSpeed in the background
    deepspeed train.py &
@@ -715,7 +715,7 @@ Hugging Face + DeepSpeed setup and make a few targeted changes. Below is a full 
 modifications and an overview of how DeepSpeed handles GPU sharding.
 todo: mkdir multigpus
 
-#### Step 1: Adjust [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) Configuration:
+#### Step 1: Adjust [SLURM](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm) Configuration:
 
 ```commandline
 #SBATCH --nodes=1               # Run on one compute node
@@ -738,7 +738,7 @@ remove the line
 
 #### Step 2: Set up DeepSpeed master address and port:
 
-Place these lines before the training command in the [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) script:
+Place these lines before the training command in the [SLURM](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm) script:
 
 ```commandline
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
@@ -758,7 +758,7 @@ These environment variables configure distributed training manually.
 
 - `RANK` and LOCAL_RANK: Needed for some custom multi-node setups.
 
-#### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](experiments/deepspeed-single-gpu/deepspeed.slurm) script:
+#### Step 3: Use the deepspeed Launcher with `--num_gpus` in the [SLURM](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm) script:
 
 ```commandline
 # Launch the training script with DeepSpeed, using all GPUs allocated by SLURM, and run in the background

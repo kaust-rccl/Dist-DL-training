@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=baseline-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=zero3-cpu-offload-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                             # Number of tasks (usually 1 for single-GPU jobs)
 #SBATCH --tasks-per-node=1                     # One task per node
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task
@@ -15,7 +15,7 @@
 # ------------------------------
 SCRIPT_DIR=$(pwd)
 
-cd "$SCRIPT_DIR/../.."   # → Go to project root: Dist-DL-training/deepspeed
+cd "$SCRIPT_DIR/../../.."   # → Go to project root: Dist-DL-training/deepspeed
 
 JOB_ID=${SLURM_JOB_ID:-manual}
 EXPERIMENT_DIR="$SCRIPT_DIR"
@@ -45,7 +45,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py
+python scripts/train.py --deepspeed ds_congigs/zero3_cpu_offload.json
 
 TRAIN_PID=$!
 
