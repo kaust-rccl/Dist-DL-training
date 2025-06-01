@@ -15,7 +15,7 @@
 # ------------------------------
 SCRIPT_DIR=$(pwd)
 
-cd "$SCRIPT_DIR/../../../.."   # → Go to project root: Dist-DL-training/deepspeed
+cd "$SCRIPT_DIR/../../../../.."   # → Go to project root: Dist-DL-training/deepspeed
 
 JOB_ID=${SLURM_JOB_ID:-manual}
 EXPERIMENT_DIR="$SCRIPT_DIR"
