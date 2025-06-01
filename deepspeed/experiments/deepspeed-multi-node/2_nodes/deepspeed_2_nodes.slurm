@@ -76,7 +76,7 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
             --nproc_per_node=1 \
             --node_rank=$i \
             --rdzv_endpoint=$master_ip:$master_port \
-            train.py                                                              # Launch distributed training
+            scripts/train_multi_nodes.py --deepspeed ds_configs/zero_0.json                           # Launch distributed training
     " &
 done
 

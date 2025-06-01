@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=8_gpus_zero0-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
-#SBATCH --ntasks=1                                           # Number of tasks (usually 1 for single-GPU jobs)
+#SBATCH --job-name=8-gpus-zero0-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --ntasks=1                                           # Number of tasks
 #SBATCH --tasks-per-node=1                                   # One task per node
 #SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
 #SBATCH --gpus=8                                             # Request 8 GPU

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=2-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
-#SBATCH --nodes=2                                                # Number of nodes to allocate
-#SBATCH --ntasks=2                                               # Number of tasks
+#SBATCH --job-name=3-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
+#SBATCH --nodes=3                                                # Number of nodes to allocate
+#SBATCH --ntasks=3                                               # Number of tasks
 #SBATCH --ntasks-per-node=1                                      # One task (process) per node
 #SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
 #SBATCH --gpus=1                                                 # Request 1 GPU
@@ -76,7 +76,7 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
             --nproc_per_node=1 \
             --node_rank=$i \
             --rdzv_endpoint=$master_ip:$master_port \
-            train.py                                                              # Launch distributed training
+            scripts/train_multi_nodes.py --deepspeed ds_configs/zero_0.json                           # Launch distributed training
     " &
 done
 
