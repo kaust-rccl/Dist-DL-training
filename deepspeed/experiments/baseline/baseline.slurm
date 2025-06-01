@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=baseline--bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=baseline-bloom-finetune     # Name of the job shown in SLURM queue
 #SBATCH --gpus=1                                # Request 1 GPU
 #SBATCH --mem=32G                               # Request 32 GB of system memory
 #SBATCH --constraint=v100                       # V100 GPU (optional)
@@ -9,7 +9,8 @@
 # ------------------------------
 # Resolve directory paths
 # ------------------------------
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR=$(PWD)
+
 cd "$SCRIPT_DIR/../.."   # → Go to project root: Dist-DL-training/deepspeed
 
 JOB_ID=${SLURM_JOB_ID:-manual}
@@ -40,8 +41,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py \
-  --output_dir outputs/baseline-run-${JOB_ID} &
+python scripts/train.py
 
 TRAIN_PID=$!
 
