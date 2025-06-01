@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=2_gpus_zero0-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=8_gpus_zero0-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                                           # Number of tasks (usually 1 for single-GPU jobs)
 #SBATCH --tasks-per-node=1                                   # One task per node
 #SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
@@ -45,7 +45,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py --deepspeed ds_configs/zero0.json &
+python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero0.json &
 
 TRAIN_PID=$!
 

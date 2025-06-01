@@ -35,7 +35,7 @@ TRAINING_ARGS = TrainingArguments(
     output_dir="./bloom-qa-finetuned",  # Path to save checkpoints, logs, and final model
 
     # Evaluation Strategy: Run evaluation at the end of each epoch
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
 
     # Save Strategy: Save a checkpoint at the end of each epoch
     save_strategy="epoch",

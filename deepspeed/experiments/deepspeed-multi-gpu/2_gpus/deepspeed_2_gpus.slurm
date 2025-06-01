@@ -53,7 +53,7 @@ export LOCAL_RANK=0                                                           # 
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py --deepspeed ds_configs/zero0.json &
+python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero0.json &
 
 TRAIN_PID=$!
 
