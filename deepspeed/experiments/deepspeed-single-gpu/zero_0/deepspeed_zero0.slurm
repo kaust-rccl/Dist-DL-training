@@ -45,7 +45,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py --deepspeed ds_congigs/zero0.json
+python scripts/train.py --deepspeed ds_configs/zero0.json &
 
 TRAIN_PID=$!
 

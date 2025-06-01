@@ -15,7 +15,7 @@
 # ------------------------------
 SCRIPT_DIR=$(pwd)
 
-cd "$SCRIPT_DIR/../../.."   # → Go to project root: Dist-DL-training/deepspeed
+cd "$SCRIPT_DIR/../../../.."   # → Go to project root: Dist-DL-training/deepspeed
 
 JOB_ID=${SLURM_JOB_ID:-manual}
 EXPERIMENT_DIR="$SCRIPT_DIR"
@@ -45,7 +45,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py --deepspeed ds_congigs/zero1_cpu_offload.json
+python scripts/train.py --deepspeed ds_configs/zero1_cpu_offload.json &
 
 TRAIN_PID=$!
 

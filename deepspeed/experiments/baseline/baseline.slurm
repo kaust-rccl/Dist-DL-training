@@ -45,7 +45,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py
+python scripts/train.py &
 
 TRAIN_PID=$!
 

@@ -1,45 +1,70 @@
+# ============================================
+# BLOOM Model Loader & Saver for Fine-Tuning
+# ============================================
+
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Model to use for fine-tuning
+# --------------------------------------------
+# Configuration
+# --------------------------------------------
+
+# Pre-trained model name from Hugging Face Hub
 MODEL_NAME = "bigscience/bloom-560m"
-# Directory to save the fine-tuned model and tokenizer
+
+# Local directory to save fine-tuned model and tokenizer
 SAVE_DIR = "./bloom-finetuned"
+
+
+# --------------------------------------------
+# Step 1: Load Model and Tokenizer
+# --------------------------------------------
 
 def load_model():
     """
-    Loads the pre-trained BLOOM model and its tokenizer for causal language modeling.
+    Loads the pre-trained BLOOM-560m model and its tokenizer for causal language modeling.
 
     Returns:
-        model (AutoModelForCausalLM): A transformer model pre-trained for causal LM tasks.
-        tokenizer (AutoTokenizer): Tokenizer that corresponds to the BLOOM model.
+        model (AutoModelForCausalLM): A transformer model configured for auto-regressive (causal) generation.
+        tokenizer (AutoTokenizer): The tokenizer associated with the model.
 
-    Notes:
-        - BLOOM is a causal (auto-regressive) language model.
-        - The model can be fine-tuned using a causal language modeling objective (predict the next token).
+    Details:
+        - BLOOM is designed for causal language modeling (next-token prediction).
+        - This function loads both weights and vocab from the Hugging Face Hub.
+        - You can pass these objects directly to the HuggingFace Trainer or other training routines.
     """
-    # Load tokenizer from Hugging Face Hub (includes vocab and tokenization rules)
+    # Load the tokenizer (handles tokenization and decoding)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    # Load the pre-trained causal language model (BLOOM-560m)
+
+    # Load the pre-trained causal language model (supports generation & fine-tuning)
     model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+
     return model, tokenizer
+
+
+# --------------------------------------------
+# Step 2: Save Model and Tokenizer
+# --------------------------------------------
 
 def save_model(model, tokenizer):
     """
     Saves the fine-tuned model and tokenizer to disk.
 
     Args:
-        model (PreTrainedModel): A Hugging Face model to save.
-        tokenizer (PreTrainedTokenizer): The tokenizer used during training.
+        model (PreTrainedModel): A HuggingFace model (e.g., after training) to be saved.
+        tokenizer (PreTrainedTokenizer): The tokenizer used for training, to be saved as well.
 
     Side Effects:
-        - Creates or overwrites the directory defined in SAVE_DIR.
-        - Writes model weights, config, and tokenizer files for future reuse.
+        - Creates or overwrites the target directory at SAVE_DIR.
+        - Saves all necessary files to re-load and re-use the model and tokenizer.
 
-    Example:
-        After training, call: save_model(trainer.model, tokenizer)
+    Usage:
+        >>> save_model(trainer.model, tokenizer)
+        Saves to './bloom-finetuned'
     """
-    # Save the model's weights and configuration
+    # Save model weights, config, and training heads
     model.save_pretrained(SAVE_DIR)
-    # Save the tokenizer vocabulary and settings
+
+    # Save tokenizer vocab, merges, and config
     tokenizer.save_pretrained(SAVE_DIR)
-    print(f"Model saved to {SAVE_DIR}")
+
+    print(f"✅ Model and tokenizer saved to {SAVE_DIR}")
