@@ -78,7 +78,86 @@ conda env create -f environment.yml
 conda activate deepspeed-finetune
 ```
 
-----------------------------------
+---
+
+#  Repository Structure
+```
+.
+├── scripts/                      # Core Python modules used across all training jobs
+│   ├── train.py                  # Launches training with HF Trainer and DeepSpeed
+│   ├── data_loader.py            # Loads and tokenizes dataset (e.g., SQuAD)
+│   ├── model.py                  # Loads model and tokenizer (e.g., BLOOM)
+│   └── config.py                 # Central config for training args and CLI parsing
+│
+├── ds_configs/                   # DeepSpeed configuration JSON files
+│   ├── zero0.json
+│   ├── zero1.json
+│   ├── zero2_cpu_offload.json
+│   ├── zero2_cpu_offload_pinned_memory.json
+│   └── ...
+│
+├── experiments/                  # SLURM job scripts organized by context
+│   ├── deepspeed-single-gpu/
+│   │   ├── zero_0/
+│   │   ├── zero_1/
+│   │   ├── zero_2/
+│   │   └── ...
+│   └── deepspeed-multi-node/
+│       ├── 2_nodes/
+│       ├── 3_nodes/
+│       ├── 4_nodes/
+│       └── ...
+│
+├── log/                          # SLURM job logs (output generated at runtime)
+├── gpu_memory/                   # GPU memory logs (generated at runtime)
+├── cpu_memory/                   # CPU memory logs (generated at runtime)
+│
+└── README.md                     # Workshop guide and documentation
+
+```
+## What Each Folder Contains
+
+### `scripts/`
+Contains the core Python logic:
+
+- train.py: Orchestrates training with Hugging Face Trainer and DeepSpeed.
+
+- data_loader.py: Prepares and tokenizes datasets like SQuAD.
+
+- model.py: Loads the pretrained model and tokenizer (e.g., BLOOM).
+
+- config.py: Parses CLI arguments and sets up TrainingArguments.
+
+### `ds_configs/`
+
+- Holds all DeepSpeed `JSON` configuration files. Each file defines a different ZeRO stage or offloading strategy used in the exercises.
+
+experiments/
+Organized by training scenario:
+
+- baseline/: Runs without DeepSpeed — establishes performance and memory usage reference points.
+
+- deepspeed-single-gpu/: Individual subfolders for each ZeRO stage and offloading variant on a single GPU.
+
+- deepspeed-multi-gpu/: Training across multiple GPUs on a single node.
+
+- deepspeed-multi-node/: Weak scaling experiments over 2–6 nodes, each in its own folder.
+
+- Each subfolder contains its SLURM script and output directories (log/, gpu_memory/, cpu_memory/).
+
+### `log/`, `gpu_memory/`, `cpu_memory/`
+Automatically created during training runs:
+
+- `log/`: SLURM job output logs.
+
+- `gpu_memory/`: Logs GPU memory usage over time (via nvidia-smi).
+
+- `cpu_memory/`: Logs CPU memory usage over time (via psrecord).
+
+### `README.md`
+The central guide for running the workshop, explaining DeepSpeed, ZeRO stages, config tuning, how to extract metrics, and more.
+
+---
 
 # Baseline: BLOOM Fine-tuning without DeepSpeed:
 
