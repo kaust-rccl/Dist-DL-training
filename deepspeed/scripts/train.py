@@ -4,6 +4,7 @@ from data_loader import load_squad
 from config import TRAINING_ARGS
 import torch
 import torch.distributed as dist
+import os
 
 # ============================================
 #  BLOOM Fine-Tuning Script (Baseline Setup)
@@ -33,7 +34,20 @@ model, tokenizer = load_model()
 # Loads a subset of the SQuAD dataset and tokenizes each example as:
 # "Question: ... Context: ... Answer: ..."
 # Labels are aligned with input_ids for causal LM training.
-tokenized_datasets = load_squad(subset_size=1000)
+import os
+
+# Define the base number of samples **per GPU**
+base_size = 500
+
+# Detect number of GPUs (DeepSpeed / SLURM will set WORLD_SIZE)
+#    Fallback to 1 ifWORLD_SIZE is not set
+num_gpus = int(os.environ.get("WORLD_SIZE", 1))
+
+# Compute total subset size = base_size × num_gpus
+subset_size = base_size * num_gpus
+
+# Load and tokenize only that many examples
+tokenized_datasets = load_squad(subset_size=subset_size)
 
 # -------------------------------
 # 3. Create Data Collator

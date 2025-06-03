@@ -56,6 +56,27 @@ model, tokenizer = load_model()
 # Loads a subset of the SQuAD dataset and tokenizes each example as:
 # "Question: ... Context: ... Answer: ..."
 # Labels are aligned with input_ids for causal LM training.
+
+# Base number of samples per GPU
+base_size_per_gpu = 10000
+
+# Total number of processes (GPUs) across all nodes
+world_size = dist.get_world_size()
+
+# GPUs per node (from SLURM or fallback to all local GPUs)
+gpus_per_node = int(os.environ.get("SLURM_GPUS_ON_NODE", torch.cuda.device_count()))
+
+# Number of nodes = total GPUs // GPUs per node
+num_nodes = world_size // gpus_per_node
+
+print(f"Running on {num_nodes} nodes × {gpus_per_node} GPUs = {world_size} total GPUs")
+
+# Compute total subset size for weak scaling
+subset_size = base_size_per_gpu * world_size
+print(f"Loading subset_size = {subset_size} examples")
+
+# Load the dataset with the computed subset size
+tokenized_datasets = load_squad(subset_size=subset_size)
 tokenized_datasets = load_squad(subset_size=1000)
 
 # -------------------------------
