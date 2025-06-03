@@ -276,7 +276,7 @@ Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculat
    #### Column Descriptions
 
    | **Column**           | **Description**                                                     |
-                                                    |----------------------|---------------------------------------------------------------------|
+   |----------------------|---------------------------------------------------------------------|
    | `timestamp`          | Time of the memory snapshot.                                        |
    | `index`              | GPU index on the node (e.g. `0` for the first GPU).                 |
    | `name`               | Full name of the GPU device used.                                   |
@@ -286,7 +286,7 @@ Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculat
 3. FIll in the table
 
    | **Prompt**               | **Shell Command to Run**                                                                         | **Extracted Value (MiB)** |
-                                              |--------------------------|--------------------------------------------------------------------------------------------------|----------------------------|
+   |--------------------------|--------------------------------------------------------------------------------------------------|----------------------------|
    | **Peak** memory used?    | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`                  |                            |
    | **Minimum** memory used? | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| head -1`                  |                            |
    | **Mean** memory usage?   | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` |                            |
