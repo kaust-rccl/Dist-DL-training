@@ -120,8 +120,8 @@ def evaluate_model(trainer, dataset, tokenizer):
     return {"exact_match": np.mean(em_scores), "f1": np.mean(f1_scores)}
 
 def main():
-    tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
-    ds,tokenizer = load_squad(tokenizer)
+
+    ds, tokenizer = load_squad()
     train_ds=ds["train"].shuffle(42).select(range(TRAIN_SIZE))
     eval_ds =ds["validation"].shuffle(42).select(range(EVAL_SIZE))
 

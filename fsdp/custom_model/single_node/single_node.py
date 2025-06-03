@@ -7,6 +7,7 @@ from transformers import (
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling,
+    BloomTokenizerFast
 )
 from datasets import load_dataset
 import numpy as np
@@ -27,88 +28,87 @@ WEIGHT_DECAY = float(os.getenv("WEIGHT_DECAY", 0.01))
 FP16 = os.getenv("FP16", "False") == "True"
 BF16 = os.getenv("BF16", "True") == "True"
 
+VOCAB_SIZE   = int(os.getenv("VOCAB_SIZE",   50000))
+HIDDEN_SIZE  = int(os.getenv("HIDDEN_SIZE",  3072))
+NUM_LAYERS   = int(os.getenv("NUM_LAYERS",   24))
+NUM_HEADS    = int(os.getenv("NUM_HEADS",    24))
+FF_DIM       = int(os.getenv("FF_DIM",       12288))
+SEQ_LENGTH   = int(os.getenv("SEQ_LENGTH",   MAX_LENGTH))
+
 class SimpleGPTModel(nn.Module):
     def __init__(
         self,
-        vocab_size: int = 50_000,
-        hidden_size: int = 2_048,
+        vocab_size: int = 50000,
+        hidden_size: int = 2048,
         num_layers: int = 2,
         num_heads: int = 16,
-        dim_feedforward: int = 5_504,
+        dim_feedforward: int = 5504,
         seq_length: int = 128,
     ):
         super().__init__()
         self.seq_length = seq_length
 
+        # Embedding layer
         self.token_embedding = nn.Embedding(vocab_size, hidden_size)
 
+        # Transformer stack
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=hidden_size,
             nhead=num_heads,
             dim_feedforward=dim_feedforward,
-            batch_first=True,
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=num_layers,
+        )
 
+        # Final LM head
         self.lm_head = nn.Linear(hidden_size, vocab_size)
-        self.lm_head.weight = self.token_embedding.weight
 
-    def gradient_checkpointing_enable(self, **kwargs):
-        """HF Trainer hook – turn ON checkpointing."""
-        self.gradient_checkpointing = True
-        for m in self.modules():
-            m.__setattr__("gradient_checkpointing", True)
-
-    def gradient_checkpointing_disable(self):
-        """HF Trainer hook – turn OFF checkpointing."""
-        self.gradient_checkpointing = False
-        for m in self.modules():
-            m.__setattr__("gradient_checkpointing", False)
-
+    # ⭐ forward now accepts the kwargs Trainer will pass
     def forward(
         self,
-        input_ids,
-        attention_mask=None,
-        labels=None,
+        input_ids,              # (batch, seq_len)
+        attention_mask=None,    # ignored in this simple example
+        labels=None,            # optional – return loss if provided
         **kwargs,
     ):
+        self.seq_length = input_ids.size(1)
+        # (batch, seq_len, hidden)
         x = self.token_embedding(input_ids)
-        self.seq_length = x.size(1)
+        x = x.transpose(0, 1)  # (seq_len, batch, hidden)
 
+        # causal mask so tokens can’t see the future
         causal_mask = torch.triu(
             torch.full(
-                (self.seq_length, self.seq_length),
-                float("-inf"),
-                device=x.device,
+                (self.seq_length, self.seq_length), float("-inf"), device=x.device
             ),
             diagonal=1,
         )
 
-        if getattr(self, "gradient_checkpointing", False):
-            for layer in self.transformer.layers:
-                x = checkpoint(layer, x, src_mask=causal_mask, use_reentrant=False)
-        else:
-            x = self.transformer(x, mask=causal_mask)
+        # Transformer
+        x = self.transformer(x, mask=causal_mask)
+        x = x.transpose(0, 1)  # (batch, seq_len, hidden)
 
-        logits = self.lm_head(x)
+        # logits
+        logits = self.lm_head(x)  # (batch, seq_len, vocab)
 
+        # Return loss + logits if labels are supplied
         if labels is not None:
-            shift_logits = logits[:, :-1].contiguous()
-            shift_labels = labels[:, 1:].contiguous()
             loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(
-                shift_logits.view(-1, shift_logits.size(-1)),
-                shift_labels.view(-1),
+                logits.view(-1, logits.size(-1)),   # (B × L, V)
+                labels.view(-1)                     # (B × L)
             )
             return {"loss": loss, "logits": logits}
 
         return {"logits": logits}
 
     @torch.no_grad()
-    def generate(self, input_ids, max_new_tokens: int = 50, **kwargs):
+    def generate(self, input_ids, max_new_tokens=50, **kwargs):
         self.eval()
         for _ in range(max_new_tokens):
-            logits = self(input_ids)["logits"]
+            logits = self(input_ids)["logits"]          # (B, L, V)
             next_token = logits[:, -1].argmax(-1, keepdim=True)
             input_ids = torch.cat([input_ids, next_token], dim=1)
         return input_ids
@@ -184,9 +184,12 @@ def evaluate_model(trainer, dataset, tokenizer):
             [example["attention_mask"]]
         ).to(trainer.args.device)
 
-        with trainer.model.summon_full_params(module=trainer.model):
+        with torch.no_grad():
             outputs = trainer.model.generate(
-                input_ids, attention_mask=attention_mask, max_new_tokens=50, do_sample=False
+                input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=50,
+                do_sample=False,
             )
 
         generated_answer = tokenizer.decode(
@@ -205,22 +208,20 @@ def evaluate_model(trainer, dataset, tokenizer):
 
 def main():
     # Load dataset and tokenizer
-    ds, tokenizer = load_squad(
-        BloomTokenizerFast.from_pretrained(MODEL_NAME)
-    )
+    ds, tokenizer = load_squad()
+
     train_ds = ds["train"].shuffle(42).select(range(TRAIN_SIZE))
     eval_ds  = ds["validation"].shuffle(42).select(range(EVAL_SIZE))
 
     # Initialize model
     model = SimpleGPTModel(
-        vocab_size=tokenizer.vocab_size,
-        hidden_size=3072,
-        num_layers=24,
-        num_heads=24,
-        dim_feedforward=12288,
-        seq_length=MAX_LENGTH,
+        vocab_size      = tokenizer.vocab_size,
+        hidden_size     = HIDDEN_SIZE,
+        num_layers      = NUM_LAYERS,
+        num_heads       = NUM_HEADS,
+        dim_feedforward = FF_DIM,
+        seq_length      = SEQ_LENGTH,
     )
-
     # Data collator
     collator = DataCollatorForLanguageModeling(
         tokenizer,

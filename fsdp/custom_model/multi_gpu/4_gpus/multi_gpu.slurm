@@ -1,27 +1,29 @@
 #!/bin/bash
-#SBATCH --job-name=JOB_NAME                        
-#SBATCH --output=JOB_NAME_%j.out                   # Stdout file
-#SBATCH --error=JOB_NAME_%j.err                    # Stderr file
-#SBATCH --nodes=1	                           # Total nodes
-#SBATCH --ntasks=2		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
-#SBATCH --ntasks-per-node=2		           # Processes per node
-#SBATCH --gpus-per-node=2		           # GPUs per node
-#SBATCH --constraint=a100	 	           # e.g. v100,cpu_intel_platinum_8260,gpu_ai
+#SBATCH --job-name=custom_multi_gpu_4                        
+#SBATCH --output=logs/custom_multi_gpu_4_%j.out
+#SBATCH --error=logs/custom_multi_gpu_4_%j.err
+#SBATCH --ntasks=4		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
+#SBATCH --ntasks-per-node=4		           # Processes per node
+#SBATCH --gpus-per-node=8		           # GPUs per node
+#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai
 #SBATCH --cpus-per-task=4		           # CPU cores per process
-#SBATCH --time=01:00:00	                           # HH:MM:SS
+#SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=0		                           # Memory per node
+
+source env_vars.sh
 
 # Activate environment
 torch_fsdpenv=${CONDA_SH_PATH}
 source $torch_fsdpenv
 conda activate ${CONDA_ENV}
 
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+
 # Wandb offline logging
 export WANDB_MODE=offline
-export EXPERIMENT_NAME=${EXPERIMENT_NAME}
-export LOG_DIR=${LOG_DIR}/${EXPERIMENT_NAME}
-mkdir -p ${LOG_DIR}/wandb_runs
-export WANDB_DIR=${LOG_DIR}/wandb_runs
+export EXPERIMENT="${EXPERIMENT_NAME}"
+export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
+mkdir -p $WANDB_DIR
 export WANDB_RUN_ID=${EXPERIMENT_NAME}
 export WANDB_NAME=${EXPERIMENT_NAME}
 export WANDB_API_KEY=${WANDB_API_KEY}
@@ -30,8 +32,8 @@ export WANDB_API_KEY=${WANDB_API_KEY}
 echo "Init dist backend"
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 export MASTER_ADDR=${master_addr}
-export MASTER_PORT=29500
-export SLURM_GPUS_PER_NODE=2
+export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
+export SLURM_GPUS_PER_NODE=4
 
 torchrun \
   --nnodes=$SLURM_NNODES \

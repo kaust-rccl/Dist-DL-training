@@ -29,14 +29,21 @@ WEIGHT_DECAY    = float(os.getenv("WEIGHT_DECAY", 0.01))
 FP16            = os.getenv("FP16", "True") == "True"
 BF16            = os.getenv("BF16", "False") == "True"
 
+VOCAB_SIZE   = int(os.getenv("VOCAB_SIZE",   50000))
+HIDDEN_SIZE  = int(os.getenv("HIDDEN_SIZE",  3072))
+NUM_LAYERS   = int(os.getenv("NUM_LAYERS",   24))
+NUM_HEADS    = int(os.getenv("NUM_HEADS",    24))
+FF_DIM       = int(os.getenv("FF_DIM",       12288))
+SEQ_LENGTH   = int(os.getenv("SEQ_LENGTH",   MAX_LENGTH))
+
 class SimpleGPTModel(nn.Module):
     def __init__(
         self,
-        vocab_size: int = 50_000,
-        hidden_size: int = 2_048,
+        vocab_size: int = 50000,
+        hidden_size: int = 2048,
         num_layers: int = 2,
         num_heads: int = 16,
-        dim_feedforward: int = 5_504,
+        dim_feedforward: int = 5504,
         seq_length: int = 128,
     ):
         super().__init__()
@@ -349,19 +356,18 @@ def main():
     torch.cuda.set_device(local_rank)
 
     # Prepare data and model
-    tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
-    ds, tokenizer = load_squad(tokenizer)
+    ds, tokenizer = load_squad()
     train_ds = ds["train"].shuffle(seed=42).select(range(TRAIN_SIZE))
     eval_ds  = ds["validation"].shuffle(seed=42).select(range(EVAL_SIZE))
 
     model = SimpleGPTModel(
-            vocab_size=tokenizer.vocab_size,
-            hidden_size=2048,
-            num_layers=24,
-            num_heads=16,
-            dim_feedforward=8192,
-            seq_length=MAX_LENGTH,
-    )
+            vocab_size      = tokenizer.vocab_size,
+            hidden_size     = HIDDEN_SIZE,
+            num_layers      = NUM_LAYERS,
+            num_heads       = NUM_HEADS,
+            dim_feedforward = FF_DIM,
+            seq_length      = SEQ_LENGTH,
+        )
     data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False, return_tensors="pt")
 
     train_ds   = train_ds.remove_columns("labels")
@@ -410,9 +416,8 @@ def main():
     trainer.train()
 
     # Final evaluation
-    if dist.get_rank() == 0:
-        metrics = evaluate_model(trainer, eval_ds, tokenizer)
-        print("Final Evaluation Metrics:", metrics)
+    metrics = evaluate_model(trainer, eval_ds, tokenizer)
+    print("Final Evaluation Metrics:", metrics)
 
     # Cleanup
     dist.barrier()

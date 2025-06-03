@@ -1,16 +1,17 @@
-import os, time, re, string
+import os
+import time
+import re
+import string
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn import TransformerEncoderLayer
 from torch.utils.checkpoint import checkpoint
-import pynvml; pynvml.nvmlInit()
+import pynvml
+pynvml.nvmlInit()
 import numpy as np
 import wandb
-from transformers import (
-    TrainerCallback, Trainer, TrainingArguments,
-    DataCollatorForLanguageModeling, BloomTokenizerFast
-)
+from transformers import TrainerCallback, Trainer, TrainingArguments, DataCollatorForLanguageModeling, BloomTokenizerFast
 from datasets import load_dataset
 
 # Config placeholders
@@ -21,21 +22,28 @@ MAX_LENGTH      = int(os.getenv("MAX_LENGTH", 512))
 TRAIN_SIZE      = int(os.getenv("TRAIN_SIZE", 1000))
 EVAL_SIZE       = int(os.getenv("EVAL_SIZE", 100))
 BATCH_SIZE      = int(os.getenv("PER_DEVICE_BATCH_SIZE", 1))
-GRAD_ACC_STEPS  = int(os.getenv("GRAD_ACC_STEPS", 4))
+GRAD_ACC_STEPS  = int(os.getenv("GRAD_ACC_STEPS", 1))
 NUM_EPOCHS      = int(os.getenv("NUM_EPOCHS", 5))
 LR              = float(os.getenv("LEARNING_RATE", 5e-5))
 WEIGHT_DECAY    = float(os.getenv("WEIGHT_DECAY", 0.01))
 FP16            = os.getenv("FP16", "True") == "True"
 BF16            = os.getenv("BF16", "False") == "True"
 
+VOCAB_SIZE   = int(os.getenv("VOCAB_SIZE",   50000))
+HIDDEN_SIZE  = int(os.getenv("HIDDEN_SIZE",  3072))
+NUM_LAYERS   = int(os.getenv("NUM_LAYERS",   24))
+NUM_HEADS    = int(os.getenv("NUM_HEADS",    24))
+FF_DIM       = int(os.getenv("FF_DIM",       12288))
+SEQ_LENGTH   = int(os.getenv("SEQ_LENGTH",   MAX_LENGTH))
+
 class SimpleGPTModel(nn.Module):
     def __init__(
         self,
-        vocab_size: int = 50_000,
-        hidden_size: int = 2_048,
+        vocab_size: int = 50000,
+        hidden_size: int = 2048,
         num_layers: int = 2,
         num_heads: int = 16,
-        dim_feedforward: int = 5_504,
+        dim_feedforward: int = 5504,
         seq_length: int = 128,
     ):
         super().__init__()
@@ -113,7 +121,6 @@ class SimpleGPTModel(nn.Module):
             next_token = logits[:, -1].argmax(-1, keepdim=True)
             input_ids = torch.cat([input_ids, next_token], dim=1)
         return input_ids
-
 
 class UtilisationCallback(TrainerCallback):
     def __init__(self):
@@ -343,31 +350,28 @@ def evaluate_model(trainer, dataset, tokenizer):
     return {"exact_match": np.mean(em_scores), "f1": np.mean(f1_scores)}
 
 def main():
-    # Initialize distributed backend
+    # Initialize distributed training
     dist.init_process_group(backend="nccl")
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     torch.cuda.set_device(local_rank)
 
     # Prepare data and model
-    tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
-    ds, tokenizer = load_squad(tokenizer)
-    train_ds = ds["train"].shuffle(42).select(range(TRAIN_SIZE))
-    eval_ds = ds["validation"].shuffle(42).select(range(EVAL_SIZE))
+    ds, tokenizer = load_squad()
+    train_ds = ds["train"].shuffle(seed=42).select(range(TRAIN_SIZE))
+    eval_ds  = ds["validation"].shuffle(seed=42).select(range(EVAL_SIZE))
 
     model = SimpleGPTModel(
-        vocab_size=tokenizer.vocab_size,
-        hidden_size=2048,
-        num_layers=3,         # keep your 3-layer tiny model
-        num_heads=16,
-        dim_feedforward=8192,
-        seq_length=MAX_LENGTH,
-    )
+            vocab_size      = tokenizer.vocab_size,
+            hidden_size     = HIDDEN_SIZE,
+            num_layers      = NUM_LAYERS,
+            num_heads       = NUM_HEADS,
+            dim_feedforward = FF_DIM,
+            seq_length      = SEQ_LENGTH,
+        )
     data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False, return_tensors="pt")
 
-    # LM objective – drop labels
-    train_ds = train_ds.remove_columns("labels")
-
-    # FSDP configuration
+    train_ds   = train_ds.remove_columns("labels")
+    
     fsdp_cfg = {
         "transformer_layer_cls_to_wrap": ["torch.nn.modules.transformer.TransformerEncoderLayer"],
         "backward_prefetch": "backward_post",
@@ -375,8 +379,8 @@ def main():
         "sync_module_states": True,
     }
 
-    # Training arguments
-    args = TrainingArguments(
+    # Define training arguments
+    training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         report_to="wandb",
         run_name=EXPERIMENT_NAME,
@@ -400,7 +404,7 @@ def main():
     # Initialize Trainer
     trainer = Trainer(
         model=model,
-        args=args,
+        args=training_args,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
         tokenizer=tokenizer,
@@ -411,10 +415,9 @@ def main():
     # Start training
     trainer.train()
 
-    # Final evaluation on rank 0
-    if dist.get_rank() == 0:
-        metrics = evaluate_model(trainer, eval_ds, tokenizer)
-        print("Final Evaluation Metrics:", metrics)
+    # Final evaluation
+    metrics = evaluate_model(trainer, eval_ds, tokenizer)
+    print("Final Evaluation Metrics:", metrics)
 
     # Cleanup
     dist.barrier()
