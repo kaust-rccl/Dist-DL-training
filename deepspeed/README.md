@@ -240,7 +240,7 @@ which are essential for understanding and debugging model training.
    Extract the following metrics from the output log and populate the table below:
 
    | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
-                           |--------------------------------|-----------------------------------------------------------|----------------|
+   |--------------------------------|-----------------------------------------------------------|----------------|
    | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
    | Eval Loss (Epoch 1)            | First `eval_loss` where `'epoch': 1.0`                    |                |
    | Eval Loss (Epoch 2)            | `eval_loss` where `'epoch': 2.0`                          |                |
@@ -702,10 +702,11 @@ Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, w
 | Bloom 560M, 500 subset | `pin_memory: true`  | run `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the GPU memory logs of the `pin_memory: true` run in located  | run `tail -n +2 cpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the CPU memory logs of the `pin_memory: false` run in located | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: TRUE` run in located  |
 | Bloom 560M, 500 subset | `pin_memory: false` | run `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the GPU memory logs of the `pin_memory: false` run in located | run `tail -n +2 cpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the CPU memory logs of the `pin_memory: false` run in located | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: false` run in located |
 
-#### Quiz Questions:
+### Quiz Questions:
 
 **Did enabling `pin_memory: true` reduce runtime in Stage 2 + offloading?**  
 → If so, by how much?
+
 ---
 
 ### Part 2: Recreate the ZeRO Stage Comparison Table
@@ -781,7 +782,7 @@ tokenized_datasets = load_squad(subset_size=1000)
 | Peak CPU Memory (MiB)  | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
 | Avg CPU Memory (MiB)   | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
 
-#### Quiz Questions:
+### Quiz Questions:
 
 Use your completed memory and runtime benchmark tables to answer the following questions for each part.
 
@@ -918,7 +919,7 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 | Peak CPU Memory (MiB)         | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
 | Avg CPU Memory (MiB)          | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
 
-#### Quiz Questions
+### Quiz Questions
 
 1. Given weak scaling, should **Peak GPU Memory** per GPU remain constant? Explain any deviations you observe.
 
@@ -961,7 +962,7 @@ Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and
 > Submit from a dedicated directory that won’t be modified.  
 > This ensures reproducibility and avoids unintended changes in long-running or queued jobs.
 
-#### Quiz Questions
+### Quiz Questions
 
 1. How does enabling offloading affect **Train Runtime** and **Samples/sec**? Quantify the trade-off between memory
    savings and speed.
@@ -1240,3 +1241,12 @@ Fill in these metrics for **2, 3, 4, and 6 nodes**, where the dataset grows prop
 | Peak CPU Memory (MiB)         | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
 | Avg CPU Memory (MiB)          | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
 
+### Quiz Questions:
+
+1. **Expectation Check:**
+
+    In weak scaling, the **Train Samples/sec** metric is expected to remain **roughly constant** as we add more nodes.
+    Is this expectation met in your runs? Why or why not?
+    > (Hint: Consider communication overhead, data loading, and initialization costs.)
+
+2. Looking at the Average GPU Memory, does it increase, decrease, or stay stable as you scale to more nodes?
