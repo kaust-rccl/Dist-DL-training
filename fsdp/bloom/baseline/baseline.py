@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.distributed as dist
 from transformers import (
     BloomForCausalLM,
     BloomTokenizerFast,
@@ -12,22 +13,21 @@ import numpy as np
 import re
 import string
 
-# Config placeholders from environment
+# Environment/config placeholders
 MODEL_NAME = os.getenv("MODEL_NAME", "bigscience/bloom-560m")
-EXPERIMENT_NAME = os.getenv("EXPERIMENT_NAME", "default_experiment")
+EXPERIMENT_NAME = os.getenv("EXPERIMENT", "default_experiment")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "./outputs")
 MAX_LENGTH = int(os.getenv("MAX_LENGTH", 512))
-TRAIN_SIZE = int(os.getenv("TRAIN_SIZE", 1000))
+TRAIN_SIZE = int(os.getenv("TRAIN_SIZE", 500))
 EVAL_SIZE = int(os.getenv("EVAL_SIZE", 100))
-BATCH_SIZE = int(os.getenv("PER_DEVICE_BATCH_SIZE", 1))
-GRAD_ACC_STEPS = int(os.getenv("GRAD_ACC_STEPS", 4))
 NUM_EPOCHS = int(os.getenv("NUM_EPOCHS", 5))
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 1))
 LR = float(os.getenv("LEARNING_RATE", 5e-5))
 WEIGHT_DECAY = float(os.getenv("WEIGHT_DECAY", 0.01))
+GRAD_ACC_STEPS = int(os.getenv("GRAD_ACC", 4))
 FP16 = os.getenv("FP16", "False") == "True"
 BF16 = os.getenv("BF16", "True") == "True"
 
-# Utility functions for EM/F1
 
 def load_squad():
     """Load and preprocess the SQuAD dataset for generative QA."""
@@ -97,7 +97,7 @@ def evaluate_model(trainer, dataset, tokenizer):
             [example["attention_mask"]]
         ).to(trainer.args.device)
 
-        with trainer.model.summon_full_params(module=trainer.model):
+        with torch.no_grad():
             outputs = trainer.model.generate(
                 input_ids,
                 attention_mask=attention_mask,
@@ -120,21 +120,15 @@ def evaluate_model(trainer, dataset, tokenizer):
 
     return {"exact_match": np.mean(em_scores), "f1": np.mean(f1_scores)}
 
+
+
 def main():
-    tokenizer = BloomTokenizerFast.from_pretrained(MODEL_NAME)
-    tokenized_ds, _ = load_squad(tokenizer)
-    train_ds = tokenized_ds["train"].shuffle(42).select(range(TRAIN_SIZE))
-    eval_ds = tokenized_ds["validation"].shuffle(42).select(range(EVAL_SIZE))
+    tokenized_ds, tokenizer = load_squad()
+    train_ds = tokenized_ds["train"].shuffle(seed=42).select(range(TRAIN_SIZE))
+    eval_ds = tokenized_ds["validation"].shuffle(seed=42).select(range(EVAL_SIZE))
 
     model = BloomForCausalLM.from_pretrained(MODEL_NAME)
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model, label_pad_token_id=-100)
-
-    fsdp_config = {
-        "transformer_layer_cls_to_wrap": ["BloomBlock"],
-        "backward_prefetch": "backward_post",
-        "forward_prefetch": True,
-        "sync_module_states": True,
-    }
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
@@ -150,8 +144,6 @@ def main():
         weight_decay=WEIGHT_DECAY,
         fp16=FP16,
         bf16=BF16,
-        fsdp="full_shard",
-        fsdp_config=fsdp_config,
         push_to_hub=False,
     )
 
@@ -166,14 +158,10 @@ def main():
 
     trainer.train()
     metrics = evaluate_model(trainer, eval_ds, tokenizer)
-    print("Metrics:", metrics)
+    print("Evaluation Metrics:", metrics)
 
-    model.save_pretrained(f"./{EXPERIMENT_NAME}")
-    tokenizer.save_pretrained(f"./{EXPERIMENT_NAME}")
-
-    import torch.distributed as dist
-    if dist.is_initialized():
-        dist.destroy_process_group()
+    model.save_pretrained("./bloom-qa-finetuned")
+    tokenizer.save_pretrained("./bloom-qa-finetuned")
 
 if __name__ == "__main__":
     main()

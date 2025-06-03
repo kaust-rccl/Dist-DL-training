@@ -1,14 +1,17 @@
 #!/bin/bash
-#SBATCH --job-name=JOB_NAME                 
-#SBATCH --output=JOB_NAME_%j.out                   # Stdout file
-#SBATCH --error=JOB_NAME_%j.err                    # Stderr file
-#SBATCH --nodes=2	                           # Total nodes
-#SBATCH --tasks-per-node=1		           # Tasks per node
-#SBATCH --gpus-per-node=8		           # GPUs per node
+#SBATCH --job-name=multi_node_custom_2                 
+#SBATCH --output=logs/multi_node_custom_2_%j.out                   # Stdout file
+#SBATCH --error=logs/multi_node_custom_2_%j.err                    # Stderr file
+#SBATCH --gpus=16
+#SBATCH --gpus-per-node=8
+#SBATCH --ntasks=2
+#SBATCH --tasks-per-node=1
 #SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai          
 #SBATCH --cpus-per-task=4		           # CPU cores per process
-#SBATCH --time=01:00:00                            # HH:MM:SS
+#SBATCH --time=00:30:00                            # HH:MM:SS
 #SBATCH --mem=0		                           # Memory per node
+
+source env_vars.sh
 
 # Activate environment
 source ${CONDA_SH_PATH}
@@ -18,10 +21,9 @@ export CUDA_VISIBLE_DEVICES=0
 
 # Wandb offline logging
 export WANDB_MODE=offline
-export EXPERIMENT_NAME=${EXPERIMENT_NAME}
-export LOG_DIR=${LOG_DIR}/${EXPERIMENT_NAME}
-mkdir -p ${LOG_DIR}/wandb_runs
-export WANDB_DIR=${LOG_DIR}/wandb_runs
+export EXPERIMENT="${EXPERIMENT_NAME}"
+export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
+mkdir -p $WANDB_DIR
 export WANDB_RUN_ID=${EXPERIMENT_NAME}
 export WANDB_NAME=${EXPERIMENT_NAME}
 export WANDB_API_KEY=${WANDB_API_KEY}
@@ -36,7 +38,7 @@ export NCCL_NET_GDR_LEVEL=4                   # allow GPUDirect-RDMA if availabl
 export NCCL_IB_HCA=mlx5                       # pick Mellanox HCAs
 
 # ---------- run the benchmark ----------
-LOG="nccl_${SLURM_JOB_ID}.log"
+LOG="logs/nccl_${SLURM_JOB_ID}.log"
 srun --cpu-bind=none --ntasks-per-node=1 --gpus-per-task=1 all_reduce_perf -b 4G -e 4G -f 2 -g 1 -c 0 -n 50 -w 20 > "$LOG" 2>&1
 
 # ---------- parse result & gate ----------
@@ -60,7 +62,7 @@ export TORCH_NCCL_BLOCKING_WAIT=1
 # Setup dist
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 export MASTER_ADDR=${master_addr}
-export MASTER_PORT=29500
+export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
 export WORLD_SIZE=$SLURM_JOB_NUM_NODES
 
 # Launch training

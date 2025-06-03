@@ -1,40 +1,45 @@
 #!/bin/bash
-#SBATCH --job-name=JOB_NAME               
-#SBATCH --output=JOB_NAME_%j.out              # Stdout file
-#SBATCH --error=JOB_NAME_%j.err               # Stderr file
-#SBATCH --ntasks=2			      # Total processes
-#SBATCH --gpus=1		              # GPUs per node
-#SBATCH --tasks-per-node=1		      # Tasks per node
-#SBATCH --constraint=a100		      # e.g. a100
+#SBATCH --job-name=multi_node_8
+#SBATCH --output=logs/multi_node_8_%j.out
+#SBATCH --error=logs/multi_node_8_%j.err
+#SBATCH --gpus=64
+#SBATCH --gpus-per-node=8
+#SBATCH --ntasks=8
+#SBATCH --tasks-per-node=1
+#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai
 #SBATCH --cpus-per-task=4		      # CPU cores per process
-#SBATCH --time=01:00:00	                      # HH:MM:SS
+#SBATCH --time=00:30:00	                      # HH:MM:SS
 #SBATCH --mem=0		                      # Memory per node
+
+source env_vars.sh
 
 # Activate your virtual environment
 source ${CONDA_SH_PATH}
 conda activate ${CONDA_ENV}
 
+export CUDA_VISIBLE_DEVICES=0
+
 # Wandb offline logging
 export WANDB_MODE=offline
-export EXPERIMENT_NAME=${EXPERIMENT_NAME}
-export LOG_DIR=${LOG_DIR}/${EXPERIMENT_NAME}
-mkdir -p ${LOG_DIR}/wandb_runs
-export WANDB_DIR=${LOG_DIR}/wandb_runs
+export EXPERIMENT="${EXPERIMENT_NAME}"
+export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
+mkdir -p $WANDB_DIR
 export WANDB_RUN_ID=${EXPERIMENT_NAME}
 export WANDB_NAME=${EXPERIMENT_NAME}
-export WANDB_API_KEY=${WANDB_API_KEY}
+
 
 # Distributed setup
 echo "Initializing distributed backend"
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 export MASTER_ADDR=$master_addr
-export MASTER_PORT=29500
+export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
 export WORLD_SIZE=$SLURM_JOB_NUM_NODES
 
 # Launch multi-node training using torchrun
 srun torchrun \
   --nnodes=$WORLD_SIZE \
   --nproc_per_node=1 \
+  --node_rank=$SLURM_NODEID \
   --rdzv_backend=c10d \
   --rdzv_id=$SLURM_JOB_ID \
   --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
