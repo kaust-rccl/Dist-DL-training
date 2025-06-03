@@ -788,7 +788,7 @@ Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, w
 
 ---
 
-### Part 2: Recreate the ZeRO Stage Comparison Table
+### Part 2: Fill the ZeRO Stage Comparison Table
 
 #### How to Change Model and Dataset Subset Size
 
