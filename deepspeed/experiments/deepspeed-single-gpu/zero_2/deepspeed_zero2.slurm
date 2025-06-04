@@ -22,8 +22,8 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
-GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory"
-CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory"
+GPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/gpu_memory"
+CPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/cpu_memory"
 
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
@@ -39,7 +39,7 @@ module load cuda/12.4.1
 # ------------------------------
 nvidia-smi \
   --query-gpu=timestamp,index,name,memory.used,memory.total \
-  --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log_${JOB_ID}.csv" &
+  --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
 GPU_LOG_PID=$!
 
 # ------------------------------
@@ -53,7 +53,7 @@ TRAIN_PID=$!
 # CPU Memory Logging
 # ------------------------------
 psrecord $TRAIN_PID --include-children --interval 5 \
-  --log "$CPU_LOG_DIR/cpu_memory_log_${JOB_ID}.txt" &
+  --log "$CPU_LOG_DIR/cpu_memory_log.txt" &
 CPU_LOG_PID=$!
 
 # ------------------------------
@@ -62,3 +62,6 @@ CPU_LOG_PID=$!
 wait $TRAIN_PID
 kill $GPU_LOG_PID
 kill $CPU_LOG_PID
+
+echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
+python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"

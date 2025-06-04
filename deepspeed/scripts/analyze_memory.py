@@ -1,78 +1,108 @@
 import pandas as pd
 import argparse
 import os
-import sys
+import glob
 
+# ----------------------------------------------
+# Analyze GPU Memory Logs
+# ----------------------------------------------
+def analyze_gpu(path):
+    """
+    Analyzes GPU memory usage from all .csv logs inside path/gpu_memory/.
+    Each CSV may contain logs for one or multiple GPUs, with memory usage samples over time.
 
-# ------------------------------------------
-# Analyze GPU Memory Log
-# ------------------------------------------
-def analyze_gpu(job_id):
-    # Path to the GPU memory CSV log
-    gpu_log_path = f"gpu_memory/gpu_memory_log_{job_id}.csv"
+    Args:
+        path (str): Absolute or relative path to the job-specific log directory (contains gpu_memory/).
+    """
+    gpu_log_dir = os.path.join(path, "gpu_memory")
 
-    # Check if the file exists
-    if not os.path.exists(gpu_log_path):
-        print(f"[!] GPU log not found: {gpu_log_path}")
+    # Check if the GPU memory log directory exists
+    if not os.path.isdir(gpu_log_dir):
+        print(f"[!] GPU log directory not found: {gpu_log_dir}")
         return
 
-    # Load the CSV, skipping the first line which contains column headers from nvidia-smi
-    df = pd.read_csv(gpu_log_path, skiprows=1, header=None)
-    df.columns = ["timestamp", "index", "name", "memory_used", "memory_total"]  # Manually set column names
-
-    # Calculate peak and average GPU memory usage
-    peak = df["memory_used"].max()
-    avg = df["memory_used"].mean()
-
-    # Display results
-    print(f"GPU Memory Usage (MiB)")
-    print(f"   Peak:   {peak:.0f}")
-    print(f"   Average:{avg:.2f}")
-
-
-# ------------------------------------------
-# Analyze CPU Memory Log
-# ------------------------------------------
-def analyze_cpu(job_id):
-    # Path to the CPU memory log (psrecord output)
-    cpu_log_path = f"cpu_memory/cpu_memory_log_{job_id}.txt"
-
-    # Check if the file exists
-    if not os.path.exists(cpu_log_path):
-        print(f"[!] CPU log not found: {cpu_log_path}")
+    # Find all .csv GPU logs in the directory (one per node typically)
+    log_files = glob.glob(os.path.join(gpu_log_dir, "*.csv"))
+    if not log_files:
+        print(f"[!] No GPU memory logs found in {gpu_log_dir}")
         return
 
-    # Read the log, skipping any commented lines (e.g., header starting with #)
-    df = pd.read_csv(cpu_log_path, comment="#", delim_whitespace=True)
+    print("\nGPU Memory Usage")
 
-    # Calculate peak and average real (resident) memory usage
-    peak = df["Real"].max()
-    avg = df["Real"].mean()
+    # Process each CSV file separately (1 per node or per GPU set)
+    for file in sorted(log_files):
+        label = os.path.basename(file).replace(".csv", "")  # e.g., gpu_memory_log_gpu214-10
 
-    # Display results
-    print(f"\nCPU Memory Usage (MB)")
-    print(f"   Peak:   {peak:.0f}")
-    print(f"   Average:{avg:.2f}")
+        # NVIDIA-SMI logs have one header row we skip
+        df = pd.read_csv(file, skiprows=1, header=None)
+        df.columns = ["timestamp", "index", "name", "memory_used", "memory_total"]
+
+        # Loop over all unique GPU indices (in case multiple GPUs are recorded in the same file)
+        for idx in sorted(df["index"].unique()):
+            gpu_df = df[df["index"] == idx]
+            peak = gpu_df["memory_used"].max()
+            avg = gpu_df["memory_used"].mean()
+            print(f"[{label} - GPU {idx}] Peak = {peak:.0f} MiB, Avg = {avg:.2f} MiB")
 
 
-# ------------------------------------------
+# ----------------------------------------------
+# Analyze CPU Memory Logs
+# ----------------------------------------------
+def analyze_cpu(path):
+    """
+    Analyzes CPU memory usage from a psrecord-formatted log at path/cpu_memory/cpu_memory_log.txt.
+
+    Args:
+        path (str): Absolute or relative path to the job-specific log directory (contains cpu_memory/).
+    """
+    cpu_log_dir = os.path.join(path, "cpu_memory")
+    log_path = os.path.join(cpu_log_dir, "cpu_memory_log.txt")
+
+    # Check if the log file exists
+    if not os.path.exists(log_path):
+        print(f"[!] CPU log not found: {log_path}")
+        return
+
+    # Read the CPU log, skipping comments, splitting by whitespace
+    df = pd.read_csv(log_path, sep=r"\s+", comment="#", header=None)
+
+    # psrecord outputs: Elapsed, CPU%, Real(MB), Virtual(MB) → Real = 3rd column (index 2)
+    if df.shape[1] < 3:
+        print(f"[!] Unexpected CPU log format in {log_path}")
+        return
+
+    real = df.iloc[:, 2]
+    peak = real.max()
+    avg = real.mean()
+
+    print("\nCPU Memory Usage")
+    print(f"   Peak:   {peak:.0f} MB")
+    print(f"   Average:{avg:.2f} MB")
+
+
+# ----------------------------------------------
 # CLI Entrypoint
-# ------------------------------------------
+# ----------------------------------------------
 def main():
-    # Set up CLI argument parser
-    parser = argparse.ArgumentParser(description="Analyze GPU and CPU memory logs by JOB_ID")
-    parser.add_argument("job_id", help="SLURM job ID used in log filenames")
+    """
+    Parses CLI arguments and triggers memory analysis for GPU and CPU logs.
+    Expects:
+        - job_id (str): Used to locate logs under path/{job_id}/
+        - --path (str): Base path containing job ID directories with memory logs.
+    """
+    parser = argparse.ArgumentParser(description="Analyze memory logs for a given job")
+    parser.add_argument("job_id", help="SLURM job ID used to locate log directory")
+    parser.add_argument("--path", required=True, help="Base directory where job directories are stored")
 
-    # Parse arguments
     args = parser.parse_args()
 
-    print(f"Analyzing logs for JOB_ID: {args.job_id}")
+    job_dir = os.path.join(args.path, args.job_id)
+    print(f"Analyzing memory logs in: {job_dir}")
 
-    # Run analysis for both GPU and CPU logs
-    analyze_gpu(args.job_id)
-    analyze_cpu(args.job_id)
+    analyze_gpu(job_dir)
+    analyze_cpu(job_dir)
 
 
-# Run the script if executed directly
+# Entry point: script only executes if run directly
 if __name__ == "__main__":
     main()
