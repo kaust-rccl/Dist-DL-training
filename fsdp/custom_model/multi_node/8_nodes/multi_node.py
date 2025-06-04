@@ -373,7 +373,9 @@ def main():
         "forward_prefetch": True,
         "sync_module_states": True,
         "device_id":torch.cuda.current_device(),
-    }
+        "state_dict_type": "sharded_state_dict",
+        "offload_to_cpu": True,
+        }
 
     # Training arguments
     args = TrainingArguments(
@@ -382,6 +384,10 @@ def main():
         run_name=EXPERIMENT_NAME,
         evaluation_strategy="epoch",
         save_strategy="epoch",
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        save_total_limit=4,
         logging_strategy="steps",
         logging_steps=10,
         per_device_train_batch_size=BATCH_SIZE,

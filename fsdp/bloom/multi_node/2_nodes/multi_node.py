@@ -131,7 +131,10 @@ def main():
     fsdp_cfg={"transformer_layer_cls_to_wrap":["BloomBlock"],
             "backward_prefetch":"backward_post",
             "forward_prefetch":True,
-            "sync_module_states":True}
+            "sync_module_states":True,
+            "state_dict_type": "sharded_state_dict",
+            "offload_to_cpu": True,
+            }
 
     training_args=TrainingArguments(
         output_dir=OUTPUT_DIR,
@@ -139,6 +142,10 @@ def main():
         run_name=EXPERIMENT_NAME,
         evaluation_strategy="epoch",
         save_strategy="epoch",
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        save_total_limit=4,
         per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACC_STEPS,
