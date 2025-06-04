@@ -448,15 +448,16 @@ In your training script (`multi_gpu.py`), FSDP is configured as follows:
 
 These configurations optimize memory usage and training efficiency across multiple gpus.
 
-## 🔗 Distributed Training Setup with `torchrun`
+## 🔗 Distributed Training Setup with `torch.distributed.launch`
 
 Configure the distributed training environment:
 
 	# Distributed setup
 	master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 	export MASTER_ADDR=$master_addr
-	export MASTER_PORT=29500
+	export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')                                    
 	export WORLD_SIZE=2
+
 These environment variables configure distributed training manually.
 
 -   `MASTER_ADDR`: IP or hostname of main node (for NCCL initialization).
@@ -465,25 +466,22 @@ These environment variables configure distributed training manually.
     
 -   `WORLD_SIZE`: Total number of GPUs (set automatically by SLURM).
   
-		torchrun \
-		  --nnodes=1 \
-		  --nproc_per_node=$WORLD_SIZE \
-		  --rdzv_backend=c10d \
-		  --rdzv_id=$SLURM_JOB_ID \
-		  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-		  multi_gpu.py
+		srun --nodes=1 --ntasks=1 --gpus=$WORLD_SIZE \
+		     python -m torch.distributed.launch --use_env \
+		       --nproc_per_node=$WORLD_SIZE \
+		       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+		       multi_gpu.py
+
 **Explanation:**
 
 -   `--nnodes=1`: Specifies a single-node setup.
     
 -   `--nproc_per_node=$WORLD_SIZE`: Launches one process per GPU.
     
--   `--rdzv_backend=c10d`: Uses the c10d backend for rendezvous.
+-   `--master_addr=$MASTER_ADDR`: Specifies the master address.
     
--   `--rdzv_id=$SLURM_JOB_ID`: Unique identifier for the rendezvous.
+-   `--master_port=$MASTER_PORT`:  Specifies the master address port.
     
--   `--rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT}`: Specifies the address and port for rendezvous.
-
 
 
 
@@ -652,43 +650,67 @@ These configurations optimize memory usage and training efficiency across multip
 
 Before launching the training script, set up the environment variables necessary for distributed training:
 
-	master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
-	export MASTER_ADDR=$master_addr
-	export MASTER_PORT=29500
-	export WORLD_SIZE=$SLURM_JOB_NUM_NODES
+	nodes_array=($(scontrol show hostnames "$SLURM_NODELIST"))   # Ordered list of node hostnames
+	export MASTER_ADDR=${nodes_array[0]}                         # First node acts as the master
 
-**Explanation:**
+	# Dynamically allocate an ephemeral port for the master
+	export MASTER_PORT=$(python - <<'PY'
+	import socket
+	s = socket.socket()
+	s.bind(('', 0))
+	print(s.getsockname()[1])
+	s.close()
+	PY
+	)
 
--   `MASTER_ADDR`: Specifies the address of the master node for process synchronization.
-    
--   `MASTER_PORT`: Designates the port for communication.
-    
--   `WORLD_SIZE`: Indicates the total number of processes across all nodes.
-    
--   `NODE_RANK`: Defines the rank of the current node.
-## 🔗 Distributed Training Setup
+	echo "Master ↦ ${MASTER_ADDR}:${MASTER_PORT}"
 
-Use `srun` in conjunction with `torchrun` to initiate the distributed training:
+	export WORLD_SIZE=$(( ${#nodes_array[@]} * 1 ))              # Total number of processes across nodes
+	
+	# Prevent CPU over-subscription per rank
+	export OMP_NUM_THREADS=1
 
-	srun torchrun \
-	  --nnodes=$WORLD_SIZE \
-	  --nproc_per_node=1 \
-	  --node_rank=$SLURM_NODEID \
-	  --rdzv_backend=c10d \
-	  --rdzv_id=$SLURM_JOB_ID \
-	  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-	  multi_node.py
-**Explanation:**
+### 🔍 Explanation:
 
--   `--nnodes`: Total number of nodes participating in the job.
+-   **`MASTER_ADDR`**: IP/hostname of the master node coordinating all workers.
     
--   `--nproc_per_node`: Number of processes to launch on each node.
+-   **`MASTER_PORT`**: Dynamically chosen port used for rendezvous.
     
--   `--node_rank`: Rank of the current node.
+-   **`WORLD_SIZE`**: Total number of processes = number of nodes × processes per node (here: 1).
     
--   `--rdzv_backend`: Backend used for rendezvous (`c10d` is commonly used).
+-   **`OMP_NUM_THREADS`**: Limits threads used per process to avoid CPU contention.
+
+
+## 🚀 Distributed Training Launch
+
+Start one training process per node using `srun` and `torch.distributed.launch`:
+
+	for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
+	    srun --nodes=1 --ntasks=1 \
+	         --gpus=1 \
+	         --cpus-per-task=${SLURM_CPUS_PER_TASK} \
+	         -w ${nodes_array[$i]} \
+	         python -m torch.distributed.launch --use_env \
+	            --nproc_per_node=1 \
+	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
+	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            multi_node.py &
+	done
+	wait
+
+### 🔍 Explanation:
+
+-   **`--nodes=1 --ntasks=1`**: One task per node to align with one GPU per node.
     
--   `--rdzv_endpoint`: Specifies the rendezvous endpoint using the master address and port.
+-   **`--gpus=1`**: Allocate one GPU for the task.
+    
+-   **`--cpus-per-task`**: Match SLURM CPU allocation.
+    
+-   **`--use_env`**: Pass SLURM/exported variables to the training process.
+    
+-   **`--nnodes` / `--node_rank`**: Specify global topology info for distributed coordination.
+    
+-   **`--master_addr` / `--master_port`**: Define rendezvous target on master.
 
 ## 🧪 Exercise: Run Multi-Node Experiments and Populate Results Table
 
@@ -939,22 +961,21 @@ In your training script (`multi_gpu.py`), FSDP configuration is set as:
     
     -   Synchronizes initial parameters across all GPU ranks.
 
-## 🔗 Distributed Training Setup with `torchrun`
+## 🔗 Distributed Training Setup with `srun` and `torch.distributed.launch`
 
 Configure distributed training:
 
 	master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 	export MASTER_ADDR=${master_addr}
-	export MASTER_PORT=29500
-	export WORLD_SIZE=2  # Number of GPUs/processes
+	export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
+	export SLURM_GPUS_PER_NODE=2
 
-	torchrun \
-	  --nnodes=1 \
-	  --nproc_per_node=$WORLD_SIZE \
-	  --rdzv_backend=c10d \
-	  --rdzv_id=$SLURM_JOB_ID \
-	  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-	  multi_gpu.py
+	srun --nodes=1 --ntasks=1 --gpus=2 \
+	     python -m torch.distributed.launch --use_env \
+	       --nproc_per_node=2 \
+	       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+	       multi_gpu.py
+
 
 **Explanation:**
 
@@ -1113,7 +1134,7 @@ Before initiating training, an NCCL bandwidth test validates cluster interconnec
 
 This test ensures high-quality GPU interconnection before starting distributed training.
 
-### Launch Distributed Training (`torchrun`):
+### Launch Distributed Training (`srun` and `torch.distributed.launch`):
 
 Set environment and initiate multi-node distributed training:
 
@@ -1123,24 +1144,36 @@ Set environment and initiate multi-node distributed training:
 	export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 	export TORCH_NCCL_BLOCKING_WAIT=1
 
-	# Distributed setup
-	master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
-	export MASTER_ADDR=${master_addr}
-	export MASTER_PORT=29500
-	export WORLD_SIZE=$SLURM_JOB_NUM_NODES
+	nodes_array=($(scontrol show hostnames "$SLURM_NODELIST"))   # ordered list
+	export MASTER_ADDR=${nodes_array[0]}                         # first node is master
+	export MASTER_PORT=$(python - <<'PY'
+	import socket
+	s = socket.socket()          # open socket
+	s.bind(('', 0))              # bind to ephemeral port
+	print(s.getsockname()[1])    # emit port number
+	s.close()
+	PY
+	)
 
-	# Launch training across nodes
-	srun --cpu-bind=none --nodes=$SLURM_NNODES --ntasks-per-node=1 \
-	    torchrun \
-	    --nnodes=$SLURM_JOB_NUM_NODES \
-	    --nproc_per_node=1 \
-	    --node_rank=$SLURM_NODEID \
-	    --rdzv_backend=c10d \
-	    --rdzv_id=$SLURM_JOB_ID \
-	    --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-	    multi_node.py
+	echo "Master ↦ ${MASTER_ADDR}:${MASTER_PORT}"
+	export WORLD_SIZE=$(( ${#nodes_array[@]} * 1 ))
 
-`torchrun` handles inter-node synchronization and training initialization.
+	# Avoid CPU over-subscription inside every rank
+	export OMP_NUM_THREADS=1
+
+	for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
+	    srun --nodes=1 --ntasks=1 \
+	         --gpus=1 \
+	         --cpus-per-task=${SLURM_CPUS_PER_TASK} \
+	         -w ${nodes_array[$i]} \
+	         python -m torch.distributed.launch --use_env \
+	            --nproc_per_node=1 \
+	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
+	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            multi_node.py &
+	done
+	wait
+
 
 ## 🧪 Exercise: Run Multi-Node Experiments and Populate Results Table
 
@@ -1343,4 +1376,6 @@ Fill the following table:
 -   **Callback Metrics** provide detailed insights into GPU utilization, throughput, and memory usage.
     
 -   The ideal efficiency of 100% means perfect scaling (no overhead). Deviations indicate overheads from communication, synchronization, and parameter sharding.
+
+
 
