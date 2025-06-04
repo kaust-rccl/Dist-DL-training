@@ -22,8 +22,8 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
-GPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/gpu_memory"
-CPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/cpu_memory"
+GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
+CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 

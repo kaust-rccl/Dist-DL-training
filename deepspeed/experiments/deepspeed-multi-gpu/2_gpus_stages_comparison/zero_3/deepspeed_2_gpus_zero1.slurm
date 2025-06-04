@@ -22,9 +22,8 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
-GPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/gpu_memory"
-CPU_LOG_DIR="$EXPERIMENT_DIR/$JOB_ID/cpu_memory"
-mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
+CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
 # ------------------------------
 # Environment Setup
@@ -60,7 +59,7 @@ TRAIN_PID=$!
 # CPU Memory Logging
 # ------------------------------
 psrecord $TRAIN_PID --include-children --interval 5 \
-  --log "$CPU_LOG_DIR/cpu_memory_log_${JOB_ID}.txt" &
+  --log "$CPU_LOG_DIR/cpu_memory_log.txt" &
 CPU_LOG_PID=$!
 
 # ------------------------------
