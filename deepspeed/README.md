@@ -88,6 +88,7 @@ conda activate deepspeed-finetune
 │   ├── data_loader.py            # Loads and tokenizes dataset (e.g., SQuAD)
 │   ├── model.py                  # Loads model and tokenizer (e.g., BLOOM)
 │   └── config.py                 # Central config for training args and CLI parsing
+│   └── analyze_memory.py         # Parses GPU/CPU memory logs and summarizes peak/avg/mode usage
 │
 ├── ds_configs/                   # DeepSpeed configuration JSON files
 │   ├── zero0.json
@@ -120,13 +121,21 @@ conda activate deepspeed-finetune
 ### `scripts/`
 Contains the core Python logic:
 
-- train.py: Orchestrates training with Hugging Face Trainer and DeepSpeed.
+- `train.py`: Orchestrates training with Hugging Face Trainer and DeepSpeed.
 
-- data_loader.py: Prepares and tokenizes datasets like SQuAD.
+- `data_loader.py`: Prepares and tokenizes datasets like SQuAD.
 
-- model.py: Loads the pretrained model and tokenizer (e.g., BLOOM).
+- `model.py`: Loads the pretrained model and tokenizer (e.g., BLOOM).
 
-- config.py: Parses CLI arguments and sets up TrainingArguments.
+- `config.py`: Parses CLI arguments and sets up TrainingArguments.
+
+- `analyze_memory.py`: CLI tool that reads memory logs and reports:
+
+    - GPU: average, mode, and peak per GPU
+
+    - CPU: average, mode, and peak physical memory
+
+    - Optional CLI flags: `--cpu-only`, `--gpu-only`
 
 ### `ds_configs/`
 
@@ -150,9 +159,9 @@ Automatically created during training runs:
 
 - `log/`: SLURM job output logs.
 
-- `gpu_memory/`: Logs GPU memory usage over time (via nvidia-smi).
+- `gpu_memory/<job_id>/`:  One or more (if multi node) `.csv` files, sampled via `nvidia-smi`
 
-- `cpu_memory/`: Logs CPU memory usage over time (via psrecord).
+- `cpu_memory/<job_id>/`:  One .txt file per run, captured with `psrecord`.
 
 ### `README.md`
 The central guide for running the workshop, explaining DeepSpeed, ZeRO stages, config tuning, how to extract metrics, and more.
@@ -297,7 +306,7 @@ which are essential for understanding and debugging model training.
     ```bash
     sbatch baseline.slurm
     ```
-3. Once the job is terminated, check for the output artifacts:
+3. Once the job is terminated, check logs:
 
    Output logs found in `.out` inside [log](experiments/baseline/logs) directory, it should be tailed with the slurm job
    id.
@@ -306,79 +315,40 @@ which are essential for understanding and debugging model training.
      cat <job_name>_<job_id>.out
      ```
     - You will see lines similar to:
+   
     ```commandline
-   100%|██████████| 93/93 [02:05<00:00,  1.35s/it]
-    {'eval_loss': 1.2965800762176514, 'eval_runtime': 1.2687, 'eval_samples_per_second': 39.41, ... 'epoch': 1.0}
-    {'eval_loss': 1.5810621976852417, 'eval_runtime': 1.269,  'eval_samples_per_second': 39.403, ... 'epoch': 2.0}
-    {'eval_loss': 1.7790133953094482, 'eval_runtime': 1.2682,'eval_samples_per_second': 39.427, ... 'epoch': 2.93}
-    {'train_runtime': 125.2999, 'train_samples_per_second': 11.971, 'train_steps_per_second': 0.742, 'train_loss': 0.7039181288852486, 'epoch': 2.93}
-    Model saved to ./bloom-finetuned
+    100%|██████████| 93/93 [02:02<00:00,  1.10s/it]
+    {'eval_loss': 1.2965, 'eval_runtime': 1.267, 'eval_samples_per_second': 39.46, ...}
+    {'train_runtime': 133.21, 'train_samples_per_second': 11.26, 'train_loss': 0.7039, ...}
+    ✅ Model and tokenizer saved to ./bloom-finetuned
+   
+   GPU Memory Usage
+    [gpu_memory_log - GPU 0] Peak = 21658 MiB, Avg = 18683.53 MiB, Mode = 21658 MiB
+
+    CPU Memory Usage
+       Peak =    3892 MB
+       Average = 2276.06 MB
+       Mode =    2145, 2177 MB
     ```
 4. Fill the results table:
 
    Extract the following metrics from the output log and populate the table below:
 
-   | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
-   |--------------------------------|-----------------------------------------------------------|----------------|
-   | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
-   | Eval Loss (Epoch 1)            | First `eval_loss` where `'epoch': 1.0`                    |                |
-   | Eval Loss (Epoch 2)            | `eval_loss` where `'epoch': 2.0`                          |                |
-   | Eval Loss (Epoch 3)            | Final `eval_loss` (e.g. where `'epoch': 2.93`)            |                |
-   | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
-   | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
-   | Steps per Epoch                | Similar to the `93/93` shown in the progress bar.         |                |
-
-### Part 2: Analyze GPU Memory Usage from Logs
-
-Use your GPU memory log (e.g., `baseline-single-gpu_memory_log.csv`) to calculate and fill in the table below.
-
-#### Steps:
-
-1. Locate the log file that tracks GPU memory:
-    ```bash
-    cd gpu_memory
-    cat gpu_memory_log_<SLURM_JOB_ID>.csv
-    ```
-
-2. Understanding GPU memory tracking output with `nvidia-smi`
-
-   A typical GPU memory log file might look like this:
-
-    ```commandline
-      timestamp, index, name, memory.used [MiB], memory.total [MiB]
-      2025/05/22 09:42:33.587, 0, Tesla V100-SXM2-32GB, 1, 32768
-      2025/05/22 09:42:38.588, 0, Tesla V100-SXM2-32GB, 4, 32768
-      2025/05/22 09:42:43.588, 0, Tesla V100-SXM2-32GB, 4, 32768
-    ...
-    ```
-
-   #### Column Descriptions
-
-   | **Column**           | **Description**                                                     |
-   |----------------------|---------------------------------------------------------------------|
-   | `timestamp`          | Time of the memory snapshot.                                        |
-   | `index`              | GPU index on the node (e.g. `0` for the first GPU).                 |
-   | `name`               | Full name of the GPU device used.                                   |
-   | `memory.used [MiB]`  | Amount of GPU memory actively in use at the time of logging.        |
-   | `memory.total [MiB]` | Total available memory on the GPU. Helpful for calculating % usage. |
-
-3. FIll in the table
-
-   | **Prompt**               | **Shell Command to Run**                                                                         | **Extracted Value (MiB)** |
-   |--------------------------|--------------------------------------------------------------------------------------------------|----------------------------|
-   | **Peak** memory used?    | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`                  |                            |
-   | **Minimum** memory used? | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| head -1`                  |                            |
-   | **Mean** memory usage?   | `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` |                            |
-
-   #### Explanation
-
-    - `tail -n +2` skips the header line.
-
-    - `cut -d',' -f4` selects the memory.used [MiB] column.
-
-    - `sort -n` sorts numerically.
-
-    - `awk` sums and averages the memory values.
+| **Category**         | **Metric**                  | **Extraction Instruction**                                                       | **Your Value** |
+|----------------------|-----------------------------|----------------------------------------------------------------------------------|----------------|
+| **Training Metrics** | Final Train Loss            | Last `'train_loss': ...` from output log                                         |                |
+|                      | Eval Loss (Epoch 1)         | `'eval_loss': ...` with `'epoch': 1.0`                                           |                |
+|                      | Eval Loss (Epoch 2)         | `'eval_loss': ...` with `'epoch': 2.0`                                           |                |
+|                      | Eval Loss (Final)           | Last `'eval_loss': ...` line (e.g., `'epoch': 2.93`)                             |                |
+|                      | Train Samples/sec           | `'train_samples_per_second': ...`                                                |                |
+|                      | Eval Samples/sec            | Any `'eval_samples_per_second': ...` line (e.g. epoch 1)                         |                |
+|                      | Steps per Epoch             | Like at `93/93` in the progress bar                                              |                |
+| **GPU Memory**       | Peak Usage (MiB)            | From script output  `[gpu_memory_log - GPU 0] Peak = `                           |                |
+|                      | Average Usage (MiB)         | From script output  `[gpu_memory_log - GPU 0] ... Avg =  `                       |                |
+|                      | Mode Usage (MiB)            | Most frequent memory from script output  `[gpu_memory_log - GPU 0] ... Mode =  ` |                |
+| **CPU Memory**       | Peak Usage (MB)             | From script output  ` CPU Memory Usage ... Peak = `                              |                |
+|                      | Average Usage (MB)          | From script output  ` CPU Memory Usage ... Average = `                           |                |
+|                      | Mode Usage (MB)             | Most frequent Real from script output  ` CPU Memory Usage ... Mode = `           |                |
 
 ---
 
@@ -673,37 +643,6 @@ psrecord:
     ```
     - Cleans up both GPU and CPU memory logging processes after training ends.
 
-#### Understanding CPU Memory Tracking Output
-
-When psrecord is used to monitor CPU memory usage during training, it generates a log file (e.g.,
-`deepspeed-cpu-offloading-data-finetune<job_id>.txt`) that looks like this:
-
-```commandline
-# Elapsed time   CPU (%)     Real (MB)   Virtual (MB)
-       0.000        0.000       11.250       14.680
-       5.018       58.400      500.180     7570.797
-       10.036       22.500    1025.770    15192.977
-       ...
-     321.232       79.100     1091.695    15290.660
-```
-
-Each row represents a snapshot taken at a fixed interval (e.g., every 5 seconds).
-
-#### Column Descriptions
-
-| **Column**     | **Description**                                                                 |
-|----------------|---------------------------------------------------------------------------------|
-| `Elapsed time` | Time in seconds since memory logging began.                                     |
-| `CPU (%)`      | Percentage of CPU usage across all threads and child processes.                 |
-| `Real (MB)`    | Actual resident memory usage (RAM) of the process in megabytes.                 |
-| `Virtual (MB)` | Total virtual memory allocated, including memory that may not be actively used. |
-
-#### Why This Output Matters
-
-- **`Real (MB)`** shows how much CPU RAM is being actively used — crucial when using ZeRO stages with CPU offloading.
-- **`Virtual (MB)`** indicates total memory requested by the process, including areas mapped but not loaded into RAM.
-- **`CPU (%)`** reveals how much CPU processing is being used, which helps detect bottlenecks or offload activity.
-
 ---
 
 ## Exercise: Benchmarking ZeRO Stages with and without Offloading
@@ -743,13 +682,12 @@ This exercise focuses on evaluating the impact of enabling pinned memory in offl
    the [zero2_cpu_offload_pinned_memory.json](ds_configs/zero2_cpu_offload_pinned_memory.json) file.
 
 
-3. Find the output artifacts within same directory, once the job is terminated:
-    - The output logs (`.out` file) should be located
-      in [log](experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/log) directory
-    - The CPU memory logs in the [cpu_memory](experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/cpu_memory)
-      directory
-    - The GPU memory logs in the [cpu_memory](experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/gpu_memory)
-      directory
+3. Find the output logs within same directory, once the job is terminated:
+   The output logs (`.out` file) should be located
+    ```commandline
+    cd experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/log
+    cat <JOB_NAME>_<JOB_ID>.out
+    ```
 
 #### The `pin_memory: false` Experiment
 
@@ -766,20 +704,19 @@ This exercise focuses on evaluating the impact of enabling pinned memory in offl
 This SLURM script launches a DeepSpeed training job using the ZeRO Stage 2 configuration with CPU offloading, specified
 via the [zero2_cpu_offload.jso](ds_configs/zero2_cpu_offload.json) file.
 
-6. Find the output artifacts within same directory, once the job is terminated:
-    - The output logs (`.out` file) should be located
-      in [log](experiments/deepspeed-single-gpu/cpu_offloading/zero_2/log) directory
-    - The CPU memory logs in the [cpu_memory](experiments/deepspeed-single-gpu/cpu_offloading/zero_2/cpu_memory)
-      directory
-    - The GPU memory logs in the [cpu_memory](experiments/deepspeed-single-gpu/cpu_offloading/zero_2/gpu_memory)
-      directory
+6. Find the output logs within same directory, once the job is terminated:
+   The output logs (`.out` file) should be located
+    ```commandline
+    cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2/log
+    cat <JOB_NAME>_<JOB_ID>.out 
+    ```
 
 Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, with and without pinned memory.
 
-| **Model and Data**     | **Pinned Memory**   | **Peak GPU Memory (MiB)**                                                                                                                                    | **Peak CPU Memory (MiB)**                                                                                                                                    | **Train Samples/Seconds**                                                                                              |
-|------------------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| Bloom 560M, 500 subset | `pin_memory: true`  | run `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the GPU memory logs of the `pin_memory: true` run in located  | run `tail -n +2 cpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the CPU memory logs of the `pin_memory: false` run in located | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: TRUE` run in located  |
-| Bloom 560M, 500 subset | `pin_memory: false` | run `tail -n +2 gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the GPU memory logs of the `pin_memory: false` run in located | run `tail -n +2 cpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> where the CPU memory logs of the `pin_memory: false` run in located | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: false` run in located |
+| **Model and Data**     | **Pinned Memory**   | **Peak GPU Memory (MiB)**                               | **Peak CPU Memory (MiB)**                          | **Train Samples/Seconds**                                                                                              |
+|------------------------|---------------------|---------------------------------------------------------|----------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| Bloom 560M, 500 subset | `pin_memory: true`  | From script output `[gpu_memory_log - GPU 0] Peak =`    | From script output `CPU Memory Usage ... Peak = `  | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: TRUE` run in located  |
+| Bloom 560M, 500 subset | `pin_memory: false` | From script output `[gpu_memory_log - GPU 0] Peak =`    | From script output `CPU Memory Usage ... Peak = `  | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: false` run in located |
 
 ### Quiz Questions:
 
@@ -794,72 +731,28 @@ Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, w
 
 This section explains how to modify the model and dataset subset to perform benchmarking on larger-scale scenarios.
 
-#### Changing the Model
-
-To change the model being fine-tuned (e.g., from `bloom-560m` to `bloom-3b` or `bloom-7b`), update the model name in the
-script where `load_model()` is defined.
-
-- Open [model.py](scripts/model.py):
-    ```commandline
-    cd scripts/
-    vim model.py
-    ```
-
-- Find this line `MODEL_NAME = "bigscience/bloom-560m"`:
-
-  While in vim, press the ":" button then type "12" to find this line inside the model file
-
-
-- Replace it with the following:
-
-    ```python
-    MODEL_NAME = "bigscience/bloom-3b"  # 3 billion parameter version
-    ```
-
-#### Changing the Dataset Subset Size
-
-To avoid using the full SQuAD dataset (which can be large), the dataset loader supports subsetting.
-
-In [train.py](experiments/deepspeed-single-gpu/train.py), locate the `load_squad()` function:
-
-```python
-tokenized_datasets = load_squad(subset_size=500)
-```
-
-To use a larger dataset, change the value to 10000, for example:
-
-```python
-tokenized_datasets = load_squad(subset_size=1000)
-```
-
-#### Configurations to Try
-
-| Model        | Subset         | DeepSpeed Configs to Test                                   |
-|--------------|----------------|-------------------------------------------------------------|
-| `bloom-560m` | 500 samples    | Stage 1, Stage 2, Stage 3, each with and without offloading |
-| `bloom-3b`   | 10,000 samples | Stage 2, Stage 3, each with offloading                      |
-| `bloom-7b`   | 10,000 samples | Stage 3 with offloading only (Stage 2 likely OOM)           |
-
 ### ZeRO Stage Comparison Table (Fill in the Missing Values)
 
-| **Model and Data**      | **DeepSpeed Config**      | **Submit Training Job**                                                                              | **Peak GPU Memory Used (MiB)** | **Average GPU Memory Used (MiB)** | **Peak CPU Memory Used (MiB)** | **Average CPU Memory Used (MiB)** | **Train Samples/Second** |
-|-------------------------|---------------------------|------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------------------|--------------------------------|-----------------------------------|--------------------------|
-| BLOOM 560M, 500 samples | ZeRO Stage 1              | `cd experiments/deepspeed-single-gpu/zero_1/ && sbatch deepspeed_zero1.slurm`                        |                                |                                   |                                |                                   |                          |
-| BLOOM 560M, 500 samples | ZeRO Stage 1 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_1/ && sbatch deepspeed_zero1_offload.slurm` |                                |                                   |                                |                                   |                          |
-| BLOOM 560M, 500 samples | ZeRO Stage 2              | `cd experiments/deepspeed-single-gpu/zero_2/ && sbatch deepspeed_zero2.slurm`                        |                                |                                   |                                |                                   |                          |
-| BLOOM 560M, 500 samples | ZeRO Stage 2 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2/ && sbatch deepspeed_zero2_offload.slurm` |                                |                                   |                                |                                   |                          |
-| BLOOM 560M, 500 samples | ZeRO Stage 3              | `cd experiments/deepspeed-single-gpu/zero_3/ && sbatch deepspeed_zero3.slurm`                        |                                |                                   |                                |                                   |                          |
-| BLOOM 560M, 500 samples | ZeRO Stage 3 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_3/ && sbatch deepspeed_zero3_offload.slurm` |                                |                                   |                                |                                   |                          |
+| **DeepSpeed Config**      | **Submit Training Job**                                                                              | **Peak GPU Memory Used (MiB)** | **Average GPU Memory Used (MiB)** | **Peak CPU Memory Used (MiB)** | **Average CPU Memory Used (MiB)** | **Train Samples/Second** |
+|---------------------------|------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------------------|--------------------------------|-----------------------------------|--------------------------|
+| ZeRO Stage 1              | `cd experiments/deepspeed-single-gpu/zero_1/ && sbatch deepspeed_zero1.slurm`                        |                                |                                   |                                |                                   |                          |
+| ZeRO Stage 1 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_1/ && sbatch deepspeed_zero1_offload.slurm` |                                |                                   |                                |                                   |                          |
+| ZeRO Stage 2              | `cd experiments/deepspeed-single-gpu/zero_2/ && sbatch deepspeed_zero2.slurm`                        |                                |                                   |                                |                                   |                          |
+| ZeRO Stage 2 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2/ && sbatch deepspeed_zero2_offload.slurm` |                                |                                   |                                |                                   |                          |
+| ZeRO Stage 3              | `cd experiments/deepspeed-single-gpu/zero_3/ && sbatch deepspeed_zero3.slurm`                        |                                |                                   |                                |                                   |                          |
+| ZeRO Stage 3 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_3/ && sbatch deepspeed_zero3_offload.slurm` |                                |                                   |                                |                                   |                          |
 
-#### Running the Experiment and Extracting Metrics
+#### Extracting Metrics
 
-| **Step**               | **Command / Instruction**                                                                                                                                                         |
-|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Check training summary | find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                                         |
-| Peak GPU Memory (MiB)  | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> from the same directory where your SLURM script is located.                   |
-| Avg GPU Memory (MiB)   | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` <br/> from the same directory where your SLURM script is located. |
-| Peak CPU Memory (MiB)  | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
-| Avg CPU Memory (MiB)   | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
+| **Step**                  | **Command / Instruction**                                                                 |
+|---------------------------|-------------------------------------------------------------------------------------------|
+| Check training summary    | Find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out` |
+| Peak GPU Memory (MiB)     | From script output `[gpu_memory_log - GPU 0] Peak =`                                      |
+| Avg GPU Memory (MiB)      | From script output `[gpu_memory_log - GPU 0] ... Avg =`                                   |
+| Mode for GPU Memory (MiB) | Most frequent memory from script output  `[gpu_memory_log - GPU 0] ... Mode =  `          |
+| Peak CPU Memory (MiB)     | From script output `CPU Memory Usage ... Peak = `                                         |
+| Avg CPU Memory (MiB)      | From script output `CPU Memory Usage ... Average = `                                      |
+| Mode for CPU Memory (MiB  | Most frequent Real from script output  ` CPU Memory Usage ... Mode = `                    |
 
 ### Quiz Questions:
 
@@ -964,7 +857,7 @@ weak-scaling mode).
 import os
 
 # Define the base number of samples **per GPU**
-base_size = 10000
+base_size = 500
 
 # Detect number of GPUs (DeepSpeed / SLURM will set WORLD_SIZE)
 #    Fallback to 1 ifWORLD_SIZE is not set
@@ -979,24 +872,23 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 
 ### Fill in the results for each GPU count below.
 
-| **Metric**               |                                                                    **2 GPUs** |                                                                    **4 GPUs** |                                                                    **6 GPUs** |                                                                    **8 GPUs** |
-|--------------------------|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|
-| Submit Job               | `cd experiments/deepspeed-multi-gpu/2_gpus/ && sbatch deepspeed_2_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/4_gpus/ && sbatch deepspeed_4_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/6_gpus/ && sbatch deepspeed_6_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/8_gpus/ && sbatch deepspeed_8_gpus.slurm` |
-| Train Samples/sec        |                                                                               |                                                                               |                                                                               |                                                                               |
-| Train Loss               |                                                                               |                                                                               |                                                                               |                                                                               |
-| Peak GPU Memory (MiB)    |                                                                               |                                                                               |                                                                               |                                                                               |
-| Average GPU Memory (MiB) |                                                                               |                                                                               |                                                                               |                                                                               |
+| **Metric**                 |                                                                    **2 GPUs** |                                                                    **4 GPUs** |                                                                    **6 GPUs** |                                                                    **8 GPUs** |
+|----------------------------|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|------------------------------------------------------------------------------:|
+| Submit Job                 | `cd experiments/deepspeed-multi-gpu/2_gpus/ && sbatch deepspeed_2_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/4_gpus/ && sbatch deepspeed_4_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/6_gpus/ && sbatch deepspeed_6_gpus.slurm` | `cd experiments/deepspeed-multi-gpu/8_gpus/ && sbatch deepspeed_8_gpus.slurm` |
+| Train Samples/sec          |                                                                               |                                                                               |                                                                               |                                                                               |
+| Train Loss                 |                                                                               |                                                                               |                                                                               |                                                                               |
+| Peak GPU Memory (MiB)      |                                                                               |                                                                               |                                                                               |                                                                               |
+| Average GPU Memory (MiB)   |                                                                               |                                                                               |                                                                               |                                                                               |
+| Mode for GPU Memory (MiB)  |                                                                               |                                                                               |                                                                               |                                                                               |
 
 #### Extracting Metrics
 
-| **Step**                      | **Command / Instruction**                                                                                                                                                         |
-|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Check Training Samples/Second | find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                                         |
-| Check Training loss           | find Last `train_loss` in `{'train_loss': ...}` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                         |
-| Peak GPU Memory (MiB)         | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> from the same directory where your SLURM script is located.                   |
-| Avg GPU Memory (MiB)          | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` <br/> from the same directory where your SLURM script is located. |
-| Peak CPU Memory (MiB)         | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
-| Avg CPU Memory (MiB)          | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
+| **Step**                  | **Command / Instruction**                                                                 |
+|---------------------------|-------------------------------------------------------------------------------------------|
+| Check training summary    | Find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out` |
+| Peak GPU Memory (MiB)     | From script output `[gpu_memory_log - GPU 0] Peak =`                                      |
+| Avg GPU Memory (MiB)      | From script output `[gpu_memory_log - GPU 0] ... Avg =`                                   |
+| Mode for GPU Memory (MiB) | Most frequent memory from script output  `[gpu_memory_log - GPU 0] ... Mode =  `          |
 
 ### Quiz Questions
 
@@ -1010,26 +902,29 @@ This exercise guides the measurement and comparison of training metrics for ZeRO
 **with** and **without** CPU offloading.
 Fill in the results for ZeRO Stages 1, 2, and 3 on **2 GPUs**, both **with** and **without** CPU offloading.
 
-| **Metric**               | **Stage 1**                                                                                                  | **Stage 1 + offload**                                                                                                               | **Stage 2**                                                                                                  | **Stage 2 + offload**                                                                                                               | **Stage 3**                                                                                                  | **Stage 3 + offload**                                                                                                               |
-|--------------------------|:-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------|
-| Submit Job               | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero1.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero1_offload.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero2.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero2_offload.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero3.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero3_offload.slurm` |
-| Train Samples/sec        |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
-| Train Loss               |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
-| Peak GPU Memory (MiB)    |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
-| Average GPU Memory (MiB) |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
-| Peak CPU Memory (MiB)    |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
-| Average CPU Memory (MiB) |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+|                            | **Stage 1**                                                                                                  | **Stage 1 + offload**                                                                                                               | **Stage 2**                                                                                                  | **Stage 2 + offload**                                                                                                               | **Stage 3**                                                                                                  | **Stage 3 + offload**                                                                                                               |
+|----------------------------|:-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------|
+| Submit Job                 | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero1.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero1_offload.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero2.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero2_offload.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/zero_1/ && sbatch deepspeed_2_gpus_zero3.slurm` | `cd experiments/deepspeed-multi-gpu/2_gpus_stages_comparison/cpu_offloading/zero_1/ && sbatch deepspeed_2_gpus_zero3_offload.slurm` |
+| Train Samples/sec          |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Train Loss                 |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Peak GPU Memory (MiB)      |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Average GPU Memory (MiB)   |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Mode for GPU Memory (MiB)  |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Peak CPU Memory (MiB)      |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Average CPU Memory (MiB)   |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
+| Mode for CPU Memory (MiB)  |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |                                                                                                              |                                                                                                                                     |
 
 #### Extracting Metrics
 
-| **Step**                      | **Command / Instruction**                                                                                                                                                         |
-|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Check Training Samples/Second | find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                                         |
-| Check Training loss           | find Last `train_loss` in `{'train_loss': ...}` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                         |
-| Peak GPU Memory (MiB)         | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> from the same directory where your SLURM script is located.                   |
-| Avg GPU Memory (MiB)          | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` <br/> from the same directory where your SLURM script is located. |
-| Peak CPU Memory (MiB)         | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
-| Avg CPU Memory (MiB)          | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
+| **Step**                  | **Command / Instruction**                                                                 |
+|---------------------------|-------------------------------------------------------------------------------------------|
+| Check training summary    | Find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out` |
+| Peak GPU Memory (MiB)     | From script output `[gpu_memory_log - GPU 0] Peak =`                                      |
+| Avg GPU Memory (MiB)      | From script output `[gpu_memory_log - GPU 0] ... Avg =`                                   |
+| Mode for GPU Memory (MiB) | Most frequent memory from script output  `[gpu_memory_log - GPU 0] ... Mode =  `          |
+| Peak CPU Memory (MiB)     | From script output `CPU Memory Usage ... Peak = `                                         |
+| Avg CPU Memory (MiB)      | From script output `CPU Memory Usage ... Average = `                                      |
+| Mode for CPU Memory (MiB) | Most frequent Real from script output  ` CPU Memory Usage ... Mode = `                    |
 
 > **Note on Code Versioning and SLURM Queues**  
 > SLURM does **not** snapshot your Python scripts when you call `sbatch`.
@@ -1299,26 +1194,25 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 
 Fill in these metrics for **2, 3, 4, and 6 nodes**, where the dataset grows proportionally (10 000 samples per GPU):
 
-| **Metric**               | **2 nodes**                                                                       | **3 nodes**                                                                      | **4 nodes**                                                                      | **5 nodes**                                                                      | **6 nodes**                                                                      |
-|--------------------------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
-| Submit Job               | `cd experiments/deepspeed-multi-node/2_nodes/ && sbatch deepspeed_2_nodes.slurm`  | `cd experiments/deepspeed-multi-node/3_nodes/ && sbatch deepspeed_3_nodes.slurm` | `cd experiments/deepspeed-multi-node/4_nodes/ && sbatch deepspeed_4_nodes.slurm` | `cd experiments/deepspeed-multi-node/5_nodes/ && sbatch deepspeed_5_nodes.slurm` | `cd experiments/deepspeed-multi-node/6_nodes/ && sbatch deepspeed_6_nodes.slurm` |
-| Train Samples/sec        |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Train Loss               |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Peak GPU Memory (GiB)    |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Average GPU Memory (GiB) |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| **Metric**                 | **2 nodes**                                                                       | **3 nodes**                                                                      | **4 nodes**                                                                      | **5 nodes**                                                                      | **6 nodes**                                                                      |
+|----------------------------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
+| Submit Job                 | `cd experiments/deepspeed-multi-node/2_nodes/ && sbatch deepspeed_2_nodes.slurm`  | `cd experiments/deepspeed-multi-node/3_nodes/ && sbatch deepspeed_3_nodes.slurm` | `cd experiments/deepspeed-multi-node/4_nodes/ && sbatch deepspeed_4_nodes.slurm` | `cd experiments/deepspeed-multi-node/5_nodes/ && sbatch deepspeed_5_nodes.slurm` | `cd experiments/deepspeed-multi-node/6_nodes/ && sbatch deepspeed_6_nodes.slurm` |
+| Train Samples/sec          |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| Train Loss                 |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| Peak GPU Memory (GiB)      |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| Average GPU Memory (GiB)   |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| Mode for GPU Memory (MiB)  |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
 
 ---
 
 #### Extracting Metrics
 
-| **Step**                      | **Command / Instruction**                                                                                                                                                         |
-|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Check Training Samples/Second | find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                                         |
-| Check Training loss           | find Last `train_loss` in `{'train_loss': ...}` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out`                                                                         |
-| Peak GPU Memory (MiB)         | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| sort -n \| tail -1`<br/> from the same directory where your SLURM script is located.                   |
-| Avg GPU Memory (MiB)          | run `tail -n +2 gpu_memory/gpu_memory_log_<JOB_ID>.csv \| cut -d',' -f4 \| awk '{sum+=\$1} END {print sum/NR}'` <br/> from the same directory where your SLURM script is located. |
-| Peak CPU Memory (MiB)         | run `grep -v '^#' cpu_memory/cpu_memory_log_<JOB_ID>.txt \| awk '{print $3}' \| sort -n \| tail -1` <br/> from the same directory where your SLURM script is located.             |
-| Avg CPU Memory (MiB)          | run `grep -v '^#' cpu_memory/cpu_memory_log.txt \| awk '{sum+=$3} END {print sum/NR}'`<br/> from the same directory where your SLURM script is located.                           |
+| **Step**                  | **Command / Instruction**                                                                 |
+|---------------------------|-------------------------------------------------------------------------------------------|
+| Check training summary    | Find `train_samples_per_second` in the final summary inside `log/<JOB_NAME>_<JOB_ID>.out` |
+| Peak GPU Memory (MiB)     | From script output `[gpu_memory_log - GPU 0] Peak =`                                      |
+| Avg GPU Memory (MiB)      | From script output `[gpu_memory_log - GPU 0] ... Avg =`                                   |
+| Mode for GPU Memory (MiB) | Most frequent memory from script output  `[gpu_memory_log - GPU 0] ... Mode =  `          |
 
 ### Quiz Questions:
 
