@@ -3,6 +3,7 @@ import argparse
 import os
 import glob
 
+
 # ----------------------------------------------
 # Analyze GPU Memory Logs
 # ----------------------------------------------
@@ -45,7 +46,9 @@ def analyze_gpu(base_dir, job_id):
             gpu_df = df[df["index"] == gpu_id]
             peak = gpu_df["memory_used"].max()
             avg = gpu_df["memory_used"].mean()
-            print(f"[{filename} - GPU {gpu_id}] Peak = {peak:.0f} MiB, Avg = {avg:.2f} MiB")
+            mode = gpu_df["memory_used"].mode()
+            mode_str = ", ".join(f"{m:.0f}" for m in mode)
+            print(f"[{filename} - GPU {gpu_id}] Peak = {peak:.0f} MiB, Avg = {avg:.2f} MiB, Mode = {mode_str} MiB")
 
 
 # ----------------------------------------------
@@ -72,11 +75,13 @@ def analyze_cpu(base_dir, job_id):
         real = df.iloc[:, 2]
         peak = real.max()
         avg = real.mean()
+        mode = real.mode()
+        mode_str = ", ".join(f"{m:.0f}" for m in mode)
 
         print("\nCPU Memory Usage")
-        print(f"   Peak:   {peak:.0f} MB")
-        print(f"   Average:{avg:.2f} MB")
-
+        print(f"   Peak =    {peak:.0f} MB")
+        print(f"   Average = {avg:.2f} MB")
+        print(f"   Mode =    {mode_str} MB")
     except Exception as e:
         print(f"[!] Failed to read {log_path}: {e}")
 
@@ -88,11 +93,22 @@ def main():
     parser = argparse.ArgumentParser(description="Analyze GPU and CPU memory logs for a job")
     parser.add_argument("job_id", help="SLURM Job ID (used as log folder name)")
     parser.add_argument("--path", default=".", help="Root directory (default: current directory)")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--gpu-only", action="store_true", help="Analyze only GPU logs")
+    group.add_argument("--cpu-only", action="store_true", help="Analyze only CPU logs")
+
     args = parser.parse_args()
 
     print(f"Analyzing logs for job ID: {args.job_id} under {args.path}")
-    analyze_gpu(args.path, args.job_id)
-    analyze_cpu(args.path, args.job_id)
+
+    if args.gpu_only:
+        analyze_gpu(args.path, args.job_id)
+    elif args.cpu_only:
+        analyze_cpu(args.path, args.job_id)
+    else:
+        analyze_gpu(args.path, args.job_id)
+        analyze_cpu(args.path, args.job_id)
 
 
 if __name__ == "__main__":

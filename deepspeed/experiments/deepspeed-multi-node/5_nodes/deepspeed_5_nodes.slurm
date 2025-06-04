@@ -4,12 +4,11 @@
 #SBATCH --ntasks=5                                               # Number of tasks
 #SBATCH --ntasks-per-node=1                                      # One task (process) per node
 #SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
-#SBATCH --gpus=1                                                 # Request 1 GPU
-#SBATCH --gpus-per-node=1                                        # 1 GPU per node
+#SBATCH --gres=gpu:v100:1                                        # 1 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
 #SBATCH --time=12:00:00                                          # Maximum runtime (HH:MM:SS)
-#SBATCH --output=logs/4-nodes/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
+#SBATCH --output=log/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
 
 # ------------------------------
 # Resolve directory paths
@@ -18,12 +17,14 @@ SCRIPT_DIR=$(pwd)
 
 cd "$SCRIPT_DIR/../../.."   # → Go to project root: Dist-DL-training/deepspeed
 
+ROOT_DIR=$(pwd)
+
 JOB_ID=${SLURM_JOB_ID:-manual}
 EXPERIMENT_DIR="$SCRIPT_DIR"
 
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
-GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory"
+GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR"
 
@@ -50,11 +51,6 @@ master_ip=$(srun -n1 -N1 -w ${head_node} hostname -I | cut -d " " -f2)  # Fetch 
 master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')  # Find a free TCP port dynamically
 echo "Master endpoint: ${master_ip}:${master_port}"
 
-# -----------------------------------------
-# Prepare GPU memory logging directory
-# -----------------------------------------
-logdir=./gpus_usage/4-nodes                                    # Directory to store GPU logs
-mkdir -p "$logdir"
 
 # ----------------------------
 # Launch one process per node
@@ -68,7 +64,7 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
         hostname=\$(hostname)                                                      # Capture this node's hostname
         nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total \
                    --format=csv,nounits -l 5 \
-                   > \"$logdir/gpu_memory_log_\${hostname}.csv\" &                # Start GPU memory logging in background
+                   > \"$GPU_LOG_DIR/gpu_memory_log_\${hostname}.csv\" &                # Start GPU memory logging in background
         MEMORY_LOG_PID=\$!                                                         # Save PID of nvidia-smi logger
 
         python -m torch.distributed.run \
@@ -76,7 +72,7 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
             --nproc_per_node=1 \
             --node_rank=$i \
             --rdzv_endpoint=$master_ip:$master_port \
-            scripts/train_multi_nodes.py --deepspeed ds_configs/zero_0.json                           # Launch distributed training
+            scripts/train_multi_nodes.py --deepspeed $ROOT_DIR/ds_configs/zero0.json                           # Launch distributed training
     " &
 done
 
@@ -86,3 +82,6 @@ wait   # Wait for all backgrounded tasks to complete
 # Cleanup
 # ----------------------------
 kill $MEMORY_LOG_PID    # Stop the GPU memory logger
+
+echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
+python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR" --gpu-only

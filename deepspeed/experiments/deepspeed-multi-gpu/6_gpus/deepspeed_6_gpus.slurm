@@ -60,3 +60,6 @@ CPU_LOG_PID=$!
 wait $TRAIN_PID
 kill $GPU_LOG_PID
 kill $CPU_LOG_PID
+
+echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
+python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
