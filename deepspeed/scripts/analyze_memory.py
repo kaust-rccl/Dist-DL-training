@@ -6,103 +6,94 @@ import glob
 # ----------------------------------------------
 # Analyze GPU Memory Logs
 # ----------------------------------------------
-def analyze_gpu(path):
+def analyze_gpu(base_dir, job_id):
     """
-    Analyzes GPU memory usage from all .csv logs inside path/gpu_memory/.
-    Each CSV may contain logs for one or multiple GPUs, with memory usage samples over time.
+    Analyzes GPU memory logs from gpu_memory/<job_id>/.
+
+    Supports:
+    - Single-GPU: one file, one GPU
+    - Multi-GPU: one file, multiple GPUs
+    - Multi-node: multiple files, each with one or more GPUs
 
     Args:
-        path (str): Absolute or relative path to the job-specific log directory (contains gpu_memory/).
+        base_dir (str): Base path containing the 'gpu_memory' directory
+        job_id (str): Job ID used to locate logs inside 'gpu_memory/<job_id>/'
     """
-    gpu_log_dir = os.path.join(path, "gpu_memory")
+    gpu_log_dir = os.path.join(base_dir, "gpu_memory", job_id)
 
-    # Check if the GPU memory log directory exists
     if not os.path.isdir(gpu_log_dir):
         print(f"[!] GPU log directory not found: {gpu_log_dir}")
         return
 
-    # Find all .csv GPU logs in the directory (one per node typically)
     log_files = glob.glob(os.path.join(gpu_log_dir, "*.csv"))
     if not log_files:
-        print(f"[!] No GPU memory logs found in {gpu_log_dir}")
+        print(f"[!] No GPU logs found in {gpu_log_dir}")
         return
 
     print("\nGPU Memory Usage")
 
-    # Process each CSV file separately (1 per node or per GPU set)
-    for file in sorted(log_files):
-        label = os.path.basename(file).replace(".csv", "")  # e.g., gpu_memory_log_gpu214-10
+    for filepath in sorted(log_files):
+        filename = os.path.basename(filepath).replace(".csv", "")
+        try:
+            df = pd.read_csv(filepath, skiprows=1, header=None)
+            df.columns = ["timestamp", "index", "name", "memory_used", "memory_total"]
+        except Exception as e:
+            print(f"[!] Failed to read {filepath}: {e}")
+            continue
 
-        # NVIDIA-SMI logs have one header row we skip
-        df = pd.read_csv(file, skiprows=1, header=None)
-        df.columns = ["timestamp", "index", "name", "memory_used", "memory_total"]
-
-        # Loop over all unique GPU indices (in case multiple GPUs are recorded in the same file)
-        for idx in sorted(df["index"].unique()):
-            gpu_df = df[df["index"] == idx]
+        for gpu_id in sorted(df["index"].unique()):
+            gpu_df = df[df["index"] == gpu_id]
             peak = gpu_df["memory_used"].max()
             avg = gpu_df["memory_used"].mean()
-            print(f"[{label} - GPU {idx}] Peak = {peak:.0f} MiB, Avg = {avg:.2f} MiB")
+            print(f"[{filename} - GPU {gpu_id}] Peak = {peak:.0f} MiB, Avg = {avg:.2f} MiB")
 
 
 # ----------------------------------------------
 # Analyze CPU Memory Logs
 # ----------------------------------------------
-def analyze_cpu(path):
+def analyze_cpu(base_dir, job_id):
     """
-    Analyzes CPU memory usage from a psrecord-formatted log at path/cpu_memory/cpu_memory_log.txt.
+    Analyzes CPU memory logs from cpu_memory/<job_id>/cpu_memory_log.txt.
 
     Args:
-        path (str): Absolute or relative path to the job-specific log directory (contains cpu_memory/).
+        base_dir (str): Base path containing the 'cpu_memory' directory
+        job_id (str): Job ID used to locate logs inside 'cpu_memory/<job_id>/'
     """
-    cpu_log_dir = os.path.join(path, "cpu_memory")
-    log_path = os.path.join(cpu_log_dir, "cpu_memory_log.txt")
+    log_path = os.path.join(base_dir, "cpu_memory", job_id, "cpu_memory_log.txt")
 
-    # Check if the log file exists
     if not os.path.exists(log_path):
         print(f"[!] CPU log not found: {log_path}")
         return
 
-    # Read the CPU log, skipping comments, splitting by whitespace
-    df = pd.read_csv(log_path, sep=r"\s+", comment="#", header=None)
+    try:
+        df = pd.read_csv(log_path, sep=r"\s+", comment="#", header=None)
+        if df.shape[1] < 3:
+            raise ValueError("Log format has insufficient columns.")
+        real = df.iloc[:, 2]
+        peak = real.max()
+        avg = real.mean()
 
-    # psrecord outputs: Elapsed, CPU%, Real(MB), Virtual(MB) → Real = 3rd column (index 2)
-    if df.shape[1] < 3:
-        print(f"[!] Unexpected CPU log format in {log_path}")
-        return
+        print("\nCPU Memory Usage")
+        print(f"   Peak:   {peak:.0f} MB")
+        print(f"   Average:{avg:.2f} MB")
 
-    real = df.iloc[:, 2]
-    peak = real.max()
-    avg = real.mean()
-
-    print("\nCPU Memory Usage")
-    print(f"   Peak:   {peak:.0f} MB")
-    print(f"   Average:{avg:.2f} MB")
+    except Exception as e:
+        print(f"[!] Failed to read {log_path}: {e}")
 
 
 # ----------------------------------------------
 # CLI Entrypoint
 # ----------------------------------------------
 def main():
-    """
-    Parses CLI arguments and triggers memory analysis for GPU and CPU logs.
-    Expects:
-        - job_id (str): Used to locate logs under path/{job_id}/
-        - --path (str): Base path containing job ID directories with memory logs.
-    """
-    parser = argparse.ArgumentParser(description="Analyze memory logs for a given job")
-    parser.add_argument("job_id", help="SLURM job ID used to locate log directory")
-    parser.add_argument("--path", required=True, help="Base directory where job directories are stored")
-
+    parser = argparse.ArgumentParser(description="Analyze GPU and CPU memory logs for a job")
+    parser.add_argument("job_id", help="SLURM Job ID (used as log folder name)")
+    parser.add_argument("--path", default=".", help="Root directory (default: current directory)")
     args = parser.parse_args()
 
-    job_dir = os.path.join(args.path, args.job_id)
-    print(f"Analyzing memory logs in: {job_dir}")
-
-    analyze_gpu(job_dir)
-    analyze_cpu(job_dir)
+    print(f"Analyzing logs for job ID: {args.job_id} under {args.path}")
+    analyze_gpu(args.path, args.job_id)
+    analyze_cpu(args.path, args.job_id)
 
 
-# Entry point: script only executes if run directly
 if __name__ == "__main__":
     main()
