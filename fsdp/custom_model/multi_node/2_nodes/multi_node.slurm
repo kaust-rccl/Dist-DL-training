@@ -59,22 +59,38 @@ export NCCL_IB_HCA=mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export TORCH_NCCL_BLOCKING_WAIT=1
 
-# Setup dist
-master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
-export MASTER_ADDR=${master_addr}
-export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
-export WORLD_SIZE=$SLURM_JOB_NUM_NODES
+# Distributed setup
+echo "Initializing distributed backend"
 
-# Launch training
-srun --cpu-bind=none --nodes=$SLURM_NNODES --ntasks-per-node=1 \
-     	torchrun \
-  	--nnodes=$SLURM_JOB_NUM_NODES \
-  	--nproc_per_node=1 \
-  	--node_rank=$SLURM_NODEID \
-  	--rdzv_backend=c10d \
-  	--rdzv_id=$SLURM_JOB_ID \
-  	--rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-  	multi_node.py
+nodes_array=($(scontrol show hostnames "$SLURM_NODELIST"))   # ordered list :contentReference[oaicite:0]{index=0}
+export MASTER_ADDR=${nodes_array[0]}                         # first node is master
+export MASTER_PORT=$(python - <<'PY'
+import socket
+s = socket.socket()          # open socket
+s.bind(('', 0))              # bind to ephemeral port
+print(s.getsockname()[1])    # emit port number
+s.close()
+PY
+)
+
+echo "Master ↦ ${MASTER_ADDR}:${MASTER_PORT}"
+export WORLD_SIZE=$(( ${#nodes_array[@]} * 1 ))
+
+# Avoid CPU over-subscription inside every rank
+export OMP_NUM_THREADS=1
+
+for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
+    srun --nodes=1 --ntasks=1 \
+         --gpus=1 \
+         --cpus-per-task=${SLURM_CPUS_PER_TASK} \
+         -w ${nodes_array[$i]} \
+         python -m torch.distributed.launch --use_env \
+            --nproc_per_node=1 \
+            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
+            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+            multi_node.py &
+done
+wait
 
 # Sync logs
 wandb online

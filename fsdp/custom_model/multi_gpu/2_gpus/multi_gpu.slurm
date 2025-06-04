@@ -35,15 +35,11 @@ export MASTER_ADDR=${master_addr}
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
 export SLURM_GPUS_PER_NODE=2
 
-torchrun \
-  --nnodes=$SLURM_NNODES \
-  --nproc_per_node=$SLURM_GPUS_PER_NODE \
-  --node_rank=$SLURM_NODEID \
-  --rdzv_backend=c10d \
-  --rdzv_id=$SLURM_JOB_ID \
-  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
-  multi_gpu.py
-
+srun --nodes=1 --ntasks=1 --gpus=2 \
+     python -m torch.distributed.launch --use_env \
+       --nproc_per_node=2 \
+       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+       multi_gpu.py
 
 # Post-training: sync with Wandb
 wandb online
