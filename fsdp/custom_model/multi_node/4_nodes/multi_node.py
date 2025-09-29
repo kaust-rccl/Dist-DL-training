@@ -122,6 +122,7 @@ class UtilisationCallback(TrainerCallback):
         self.sum_util = 0.0
         self.sum_util2 = 0.0
         self.n_samples = 0
+        self.find_local=None
 
         local_rank = int(os.environ["LOCAL_RANK"])
         torch.cuda.set_device(local_rank)
@@ -156,34 +157,6 @@ class UtilisationCallback(TrainerCallback):
             device=args.device,
         )
 
-        if dist.is_initialized():
-            dist.all_reduce(local, op=dist.ReduceOp.SUM)
-
-        if dist.get_rank() == 0:
-            (
-                tot_alloc,
-                tot_reserved,
-                tot_total,
-                tot_util,
-                tot_util2,
-                n,
-            ) = local.tolist()
-            n = int(n)
-
-            def mean(x):
-                return x / n
-
-            std_util = ((tot_util2 / n) - (mean(tot_util) ** 2)) ** 0.5
-
-            wandb.run.summary.update(
-                {
-                    "avg_mem_alloc_MB": round(mean(tot_alloc), 1),
-                    "avg_mem_reserved_MB": round(mean(tot_reserved), 1),
-                    "avg_mem_total_MB": round(mean(tot_total), 1),
-                    "avg_gpu_util_%": round(mean(tot_util), 1),
-                    "std_gpu_util_%": round(std_util, 1),
-                }
-            )
         return control
 
 

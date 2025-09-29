@@ -13,7 +13,7 @@
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=${CONDA_SH_PATH}
+torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 source $torch_fsdpenv
 conda activate ${CONDA_ENV}
 
