@@ -1,5 +1,4 @@
 # Conda setup
-export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
 export CONDA_ENV="bloom_env"
 
 # Wandb/offline‐run settings

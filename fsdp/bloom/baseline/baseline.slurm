@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=single_node	          	    # Job name
-#SBATCH --output=logs/single_node_%j.out    	    # Standard output
 #SBATCH --error=logs/single_node_%j.err     	    # Standard error
+#SBATCH --output=logs/single_node_%j.out    	    # Standard output
 #SBATCH --ntasks=1   		                    # Total MPI tasks
 #SBATCH --tasks-per-node=1      	            # MPI tasks per node
 #SBATCH --gpus=1                            	    # Total GPUs per node
@@ -14,7 +14,7 @@
 source env_vars.sh
 
 # Load and activate conda environment
-source ${CONDA_SH_PATH}
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate ${CONDA_ENV}
 
 # Setup Wandb offline logging

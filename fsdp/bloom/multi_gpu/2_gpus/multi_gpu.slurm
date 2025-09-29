@@ -14,7 +14,7 @@
 source env_vars.sh
 
 # Activate environment
-source ${CONDA_SH_PATH}
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate ${CONDA_ENV}
 
 export CUDA_VISIBLE_DEVICES=0,1
