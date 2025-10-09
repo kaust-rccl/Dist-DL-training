@@ -2,14 +2,14 @@
 #SBATCH --job-name=multi_gpu_2
 #SBATCH --output=logs/multi_gpu_2_%j.out
 #SBATCH --error=logs/multi_gpu_2_%j.err            
-#SBATCH --gpus=8
-#SBATCH --gpus-per-node=8
+#SBATCH --gpus=2
+#SBATCH --gpus-per-node=2
 #SBATCH --ntasks=2
 #SBATCH --tasks-per-node=2
-#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai
+#SBATCH --constraint=v100
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00                	   # HH:MM:SS
-#SBATCH --mem=0		                   # Memory per node
+#SBATCH --mem=64G		           # Memory per node
 
 source env_vars.sh
 
