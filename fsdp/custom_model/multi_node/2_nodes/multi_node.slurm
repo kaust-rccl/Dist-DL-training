@@ -6,7 +6,7 @@
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks=2
 #SBATCH --tasks-per-node=1
-#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai          
+#SBATCH --constraint=v100       
 #SBATCH --cpus-per-task=4		           # CPU cores per process
 #SBATCH --time=00:30:00                            # HH:MM:SS
 #SBATCH --mem=0		                           # Memory per node

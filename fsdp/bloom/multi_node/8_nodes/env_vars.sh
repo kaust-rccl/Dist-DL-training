@@ -3,12 +3,12 @@ export CONDA_ENV="bloom_env"
 
 # Wandb/offline‐run settings
 export EXPERIMENT_NAME="BLOOM_Multi_Nodes_8_NODES"
-export LOG_DIR="/path/to/logs"
+export LOG_DIR="$PWD/logs"
 export WANDB_API_KEY="your_wandb_api_key"
 
 
 export MODEL_NAME="bigscience/bloom-560m"
-export OUTPUT_DIR="/path/to/outputs/${EXPERIMENT_NAME}"
+export OUTPUT_DIR="outputs/${EXPERIMENT_NAME}"
 export MAX_LENGTH=512
 export TRAIN_SIZE=500
 export EVAL_SIZE=100

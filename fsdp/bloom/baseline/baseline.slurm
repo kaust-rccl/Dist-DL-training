@@ -9,7 +9,7 @@
 #SBATCH --constraint=v100			    # e.g. a100,8gpus
 #SBATCH --cpus-per-task=4		            # CPU cores per task
 #SBATCH --time=00:30:00                        	    # HH:MM:SS
-#SBATCH --mem=0		                            # Total memory per node
+#SBATCH --mem=64G		                    # Total memory per node
 
 source env_vars.sh
 
