@@ -2,14 +2,14 @@
 #SBATCH --job-name=multi_node_custom_8                 
 #SBATCH --output=logs/multi_node_custom_8_%j.out                   # Stdout file
 #SBATCH --error=logs/multi_node_custom_8_%j.err                    # Stderr file
-#SBATCH --gpus=64
-#SBATCH --gpus-per-node=8
+#SBATCH --gpus=16
+#SBATCH --gpus-per-node=2
 #SBATCH --ntasks=8
 #SBATCH --tasks-per-node=1
 #SBATCH --constraint=v100
 #SBATCH --cpus-per-task=4		           # CPU cores per process
 #SBATCH --time=00:30:00                            # HH:MM:SS
-#SBATCH --mem=0		                           # Memory per node
+#SBATCH --mem=64G	                           # Memory per node
 
 source env_vars.sh
 
