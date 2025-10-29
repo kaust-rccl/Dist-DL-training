@@ -122,7 +122,7 @@ class UtilisationCallback(TrainerCallback):
         self.sum_util = 0.0
         self.sum_util2 = 0.0
         self.n_samples = 0
-        self.find_local=None
+        self.final_local=None
 
         local_rank = int(os.environ["LOCAL_RANK"])
         torch.cuda.set_device(local_rank)
@@ -145,17 +145,20 @@ class UtilisationCallback(TrainerCallback):
         return control
 
     def on_train_end(self, args, state, control, **kwargs):
-        local = torch.tensor(
-            [
-                self.sum_alloc,
-                self.sum_reserved,
-                self.sum_total,
-                self.sum_util,
-                self.sum_util2,
-                self.n_samples,
-            ],
-            device=args.device,
-        )
+        if self.n_samples == 0:
+            self.final_local = torch.tensor([0.,0.,0.,0.,0.,0.], device=args.device)
+        else:
+            self.final_local = torch.tensor(
+                [
+                    self.sum_alloc,
+                    self.sum_reserved,
+                    self.sum_total,
+                    self.sum_util,
+                    self.sum_util2,
+                    self.n_samples,
+                ],
+                device=args.device,
+            )
 
         return control
 
@@ -389,6 +392,30 @@ def main():
 
     # Start training
     trainer.train()
+    
+    util_cb = next(c for c in trainer.callback_handler.callbacks if isinstance(c, UtilisationCallback))
+
+    # Move tensor to device for reduction
+    local = util_cb.final_local.to(trainer.args.device)
+
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
+        torch.distributed.all_reduce(local, op=torch.distributed.ReduceOp.SUM)
+
+    tot_alloc, tot_reserved, tot_total, tot_util, tot_util2, n = local.tolist()
+    n = int(n)
+    mean = lambda x: x / n if n else 0.0
+    std_util = ((tot_util2 / n) - (mean(tot_util) ** 2)) ** 0.5 if n else 0.0
+
+    if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
+        import wandb
+        wandb.run.summary.update({
+            "avg_mem_alloc_MB": round(mean(tot_alloc), 1),
+            "avg_mem_reserved_MB": round(mean(tot_reserved), 1),
+            "avg_mem_total_MB": round(mean(tot_total), 1),
+            "avg_gpu_util_%": round(mean(tot_util), 1),
+            "std_gpu_util_%": round(std_util, 1),
+        })
 
     metrics = evaluate_model(trainer, eval_ds, tokenizer)
     print("Final Evaluation Metrics:", metrics)
