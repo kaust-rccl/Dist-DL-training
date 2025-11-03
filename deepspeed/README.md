@@ -645,87 +645,16 @@ psrecord:
 
 ---
 
-## Exercise: Benchmarking ZeRO Stages with and without Offloading
+## Exercise: Benchmarking ZeRO Stages with CPU Offloading
 
 This section walks through how to:
 
-1. Fill a table to compare `pin_memory: true` vs `false`.
-2. Fill the full benchmarking table comparing ZeRO stages.
-3. Modify model size and dataset subset for deeper experimentation.
-
-### Part 1: Compare Stage 2 With and Without `pin_memory: true`
-
-This exercise focuses on evaluating the impact of enabling pinned memory in offloading.
-
-#### Setup
-
-- Use `bloom-560m` with `stage 2 + offloading`.
-- Prepare **two configs**:
-    1. With `pin_memory: true`
-    2. With `pin_memory: false` (or omit the key)
-
-### Steps:
-
-#### The `pin_memory: true` Experiment
-
-1. Navigate to the [pinned memory](experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory) experiment directory:
-    ```commandline
-    cd experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory
-    ```
-2. Submit the job through
-   the [slurm script](experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/deepspeed_zero2_offload_pinned_memory.slurm)
-    ```commandline
-    sbatch deepspeed_zero2_offload_pinned_memory.slurm
-    ```
-   This SLURM script launches a DeepSpeed training job using the ZeRO Stage 2 configuration with CPU offloading and
-   pinned memory, specified via
-   the [zero2_cpu_offload_pinned_memory.json](ds_configs/zero2_cpu_offload_pinned_memory.json) file.
-
-
-3. Find the output logs within same directory, once the job is terminated:
-   The output logs (`.out` file) should be located
-    ```commandline
-    cd experiments/deepspeed-single-gpu/cpu_offloading/pinned_memory/log
-    cat <JOB_NAME>_<JOB_ID>.out
-    ```
-
-#### The `pin_memory: false` Experiment
-
-4. Navigate to the [Zero 2 CPU offloading experiment](experiments/deepspeed-single-gpu/cpu_offloading/zero_2):
-    ```commandline
-    cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2
-    ```
-5. Submit the job through
-   the [slurm script](experiments/deepspeed-single-gpu/cpu_offloading/zero_2/deepspeed_zero2_offload.slurm)
-    ```commandline
-    sbatch deepspeed_zero2_offload.slurm
-    ```
-
-This SLURM script launches a DeepSpeed training job using the ZeRO Stage 2 configuration with CPU offloading, specified
-via the [zero2_cpu_offload.jso](ds_configs/zero2_cpu_offload.json) file.
-
-6. Find the output logs within same directory, once the job is terminated:
-   The output logs (`.out` file) should be located
-    ```commandline
-    cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2/log
-    cat <JOB_NAME>_<JOB_ID>.out 
-    ```
-
-Use this table to record memory usage and runtime for ZeRO Stage 2 offloading, with and without pinned memory.
-
-| **Model and Data**     | **Pinned Memory**   | **Peak GPU Memory (MiB)**                               | **Peak CPU Memory (MiB)**                          | **Train Samples/Seconds**                                                                                              |
-|------------------------|---------------------|---------------------------------------------------------|----------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| Bloom 560M, 500 subset | `pin_memory: true`  | From script output `[gpu_memory_log - GPU 0] Peak =`    | From script output `CPU Memory Usage ... Peak = `  | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: TRUE` run in located  |
-| Bloom 560M, 500 subset | `pin_memory: false` | From script output `[gpu_memory_log - GPU 0] Peak =`    | From script output `CPU Memory Usage ... Peak = `  | `train_samples_per_second` in the final summary <br/> within the `.out` logs of the `pin_memory: false` run in located |
-
-### Quiz Questions:
-
-**Did enabling `pin_memory: true` reduce runtime in Stage 2 + offloading?**  
-→ If so, by how much?
+1. Fill the full benchmarking table comparing ZeRO stages.
+2. Modify model size and dataset subset for deeper experimentation.
 
 ---
 
-### Part 2: Fill the ZeRO Stage Comparison Table
+### Fill the ZeRO Stage Comparison Table
 
 #### How to Change Model and Dataset Subset Size
 
@@ -735,11 +664,8 @@ This section explains how to modify the model and dataset subset to perform benc
 
 | **DeepSpeed Config**      | **Submit Training Job**                                                                              | **Peak GPU Memory Used (MiB)** | **Average GPU Memory Used (MiB)** | **Peak CPU Memory Used (MiB)** | **Average CPU Memory Used (MiB)** | **Train Samples/Second** |
 |---------------------------|------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------------------|--------------------------------|-----------------------------------|--------------------------|
-| ZeRO Stage 1              | `cd experiments/deepspeed-single-gpu/zero_1/ && sbatch deepspeed_zero1.slurm`                        |                                |                                   |                                |                                   |                          |
 | ZeRO Stage 1 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_1/ && sbatch deepspeed_zero1_offload.slurm` |                                |                                   |                                |                                   |                          |
-| ZeRO Stage 2              | `cd experiments/deepspeed-single-gpu/zero_2/ && sbatch deepspeed_zero2.slurm`                        |                                |                                   |                                |                                   |                          |
 | ZeRO Stage 2 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_2/ && sbatch deepspeed_zero2_offload.slurm` |                                |                                   |                                |                                   |                          |
-| ZeRO Stage 3              | `cd experiments/deepspeed-single-gpu/zero_3/ && sbatch deepspeed_zero3.slurm`                        |                                |                                   |                                |                                   |                          |
 | ZeRO Stage 3 + Offloading | `cd experiments/deepspeed-single-gpu/cpu_offloading/zero_3/ && sbatch deepspeed_zero3_offload.slurm` |                                |                                   |                                |                                   |                          |
 
 #### Extracting Metrics
@@ -760,7 +686,7 @@ Use your completed memory and runtime benchmark tables to answer the following q
 
 1. Which ZeRO stage gave the lowest peak GPU memory usage on each bloom variation?
 
-2. How does runtime change when offloading is enabled?
+2. How does runtime change when offloading is enabled across ZeRo stages?
 
 ---
 
