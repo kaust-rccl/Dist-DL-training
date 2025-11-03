@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=2-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
 #SBATCH --nodes=2                                                # Number of nodes to allocate
-#SBATCH --ntasks=2                                               # Number of tasks
-#SBATCH --ntasks-per-node=1                                      # One task (process) per node
+#SBATCH --ntasks=4                                               # Number of tasks
+#SBATCH --ntasks-per-node=2                                      # 2 tasks (process) per node
 #SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
-#SBATCH --gres=gpu:v100:1                                        # 1 GPU per node
+#SBATCH --gres=gpu:v100:2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
 #SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
@@ -69,10 +69,10 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
 
         python -m torch.distributed.run \
             --nnodes=$SLURM_JOB_NUM_NODES \
-            --nproc_per_node=1 \
+            --nproc_per_node=$SLURM_GPUS_PER_NODE \
             --node_rank=$i \
             --rdzv_endpoint=$master_ip:$master_port \
-            scripts/train_multi_nodes.py --deepspeed $ROOT_DIR/ds_configs/zero0.json                           # Launch distributed training
+            scripts/train_multi_nodes.py --deepspeed $ROOT_DIR/ds_configs/zero2_cpu_offload_pinned_memory.json                           # Launch distributed training
     " &
 done
 

@@ -881,8 +881,8 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
     #SBATCH --ntasks=2                                               # Number of tasks
     #SBATCH --ntasks-per-node=1                                      # One task (process) per node
     #SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
-    #SBATCH --gpus=1                                                 # Request 1 GPU
-    #SBATCH --gpus-per-node=1                                        # 1 GPU per node
+    #SBATCH --gpus=4                                                 # Request 4 GPU
+    #SBATCH --gpus-per-node=2                                        # 2 GPU per node
     ```
 - After environment setup lines, determine master node discovery and rendezvous configuration
    ```commandline
@@ -954,8 +954,8 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
         
            # Launch the distributed training process on this node:
            python -m torch.distributed.run \
-             --nnodes=$SLURM_JOB_NUM_NODES \           # Total number of nodes in the job
-             --nproc_per_node=1 \                       # One process per node (using 1 GPU)
+             --nnodes=$SLURM_JOB_NUM_NODES \            # Total number of nodes in the job
+             --nproc_per_node=$SLURM_GPUS_PER_NODE \    # Processes per node = Number of GPUs per node
              --node_rank=$i \                           # This node's rank (0..NNODES-1)
              --rdzv_endpoint=$master_ip:$master_port \  # Rendezvous server address
              train.py                                   # Entrypoint script
@@ -992,7 +992,7 @@ Below is a side-by-side of the relevant sections, with **added/modified lines** 
         - **Distributed Launch:**
             - Invokes `python -m torch.distributed.run` with:
                 - `--nnodes` set to total nodes.
-                - `--nproc_per_node=1` (one process per node).
+                - `--nproc_per_node=$SLURM_GPUS_PER_NODE ` (processes per node = number of GPUs per node).
                 - `--node_rank=$i` (this node’s rank).
                 - `--rdzv_endpoint=$master_ip:$master_port` (rendezvous address).
             - Runs `train.py` under this torch.distributed context.
@@ -1059,10 +1059,9 @@ based on the number of GPUs allocated across all nodes.
 
 Keep **250 samples per GPU** fixed, and increase nodes (and thus GPUs) so the **total dataset** grows proportionally:
 
-- **2 nodes** (1 GPU/node) → 2 GPUs → **500** samples
-- **3 nodes** → 3 GPUs → **750** samples
-- **4 nodes** → 4 GPUs → **1000** samples
-- **6 nodes** → 6 GPUs → **1500** samples
+- **2 nodes** (2 GPU/node) → 4 GPUs → **1000** samples
+- **4 nodes** → 8 GPUs → **2000** samples
+- **8 nodes** → 16 GPUs → **4000** samples
 
 Each GPU processes the same 250-sample “chunk.” Measure how well training time and throughput hold constant as nodes
 scale.
@@ -1102,14 +1101,14 @@ tokenized_datasets = load_squad(subset_size=subset_size)
 
 Fill in these metrics for **2, 3, 4, and 6 nodes**, where the dataset grows proportionally (10 000 samples per GPU):
 
-| **Metric**                 | **2 nodes**                                                                       | **3 nodes**                                                                      | **4 nodes**                                                                      | **5 nodes**                                                                      | **6 nodes**                                                                      |
-|----------------------------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
-| Submit Job                 | `cd experiments/deepspeed-multi-node/2_nodes/ && sbatch deepspeed_2_nodes.slurm`  | `cd experiments/deepspeed-multi-node/3_nodes/ && sbatch deepspeed_3_nodes.slurm` | `cd experiments/deepspeed-multi-node/4_nodes/ && sbatch deepspeed_4_nodes.slurm` | `cd experiments/deepspeed-multi-node/5_nodes/ && sbatch deepspeed_5_nodes.slurm` | `cd experiments/deepspeed-multi-node/6_nodes/ && sbatch deepspeed_6_nodes.slurm` |
-| Train Samples/sec          |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Train Loss                 |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Peak GPU Memory (GiB)      |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Average GPU Memory (GiB)   |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
-| Mode for GPU Memory (MiB)  |                                                                                   |                                                                                  |                                                                                  |                                                                                  |                                                                                  |
+| **Metric**                 | **2 nodes**                                                                       | **4 nodes**                                                                      | **8 nodes**                                                                      |
+|----------------------------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
+| Submit Job                 | `cd experiments/deepspeed-multi-node/2_nodes/ && sbatch deepspeed_2_nodes.slurm`  | `cd experiments/deepspeed-multi-node/4_nodes/ && sbatch deepspeed_4_nodes.slurm` | `cd experiments/deepspeed-multi-node/8_nodes/ && sbatch deepspeed_8_nodes.slurm` |
+| Train Samples/sec          |                                                                                   |                                                                                  |                                                                                  |
+| Train Loss                 |                                                                                   |                                                                                  |                                                                                  |
+| Peak GPU Memory (GiB)      |                                                                                   |                                                                                  |                                                                                  |
+| Average GPU Memory (GiB)   |                                                                                   |                                                                                  |                                                                                  |
+| Mode for GPU Memory (MiB)  |                                                                                   |                                                                                  |                                                                                  |
 
 ---
 
