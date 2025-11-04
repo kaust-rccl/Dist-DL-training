@@ -9,7 +9,7 @@ export WANDB_API_KEY="your_wandb_api_key"
 
 export OUTPUT_DIR="outputs/${EXPERIMENT_NAME}"
 export MAX_LENGTH=512
-export TRAIN_SIZE=500
+export TRAIN_SIZE=250
 export EVAL_SIZE=100
 export NUM_EPOCHS=5
 export BATCH_SIZE=1

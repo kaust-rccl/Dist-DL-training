@@ -378,7 +378,7 @@ Edit the `env_vars.sh` file to set up your environment:
 	export MODEL_NAME="bigscience/bloom-560m"
 	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
 	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
+	export TRAIN_SIZE=250
 	export EVAL_SIZE=100
 	export NUM_EPOCHS=5
 	export BATCH_SIZE=1
@@ -582,7 +582,7 @@ Edit the `env_vars.sh` file to set up your environment:
 	export MODEL_NAME="bigscience/bloom-560m"
 	export OUTPUT_DIR="/path/to/multi_node/2_nodes/outputs/${EXPERIMENT_NAME}"
 	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
+	export TRAIN_SIZE=250
 	export EVAL_SIZE=100
 	export NUM_EPOCHS=5
 	export BATCH_SIZE=1
@@ -883,7 +883,7 @@ Edit `env_vars.sh` to set up your environment:
 	# Model and training parameters
 	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
 	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
+	export TRAIN_SIZE=250
 	export EVAL_SIZE=100
 	export NUM_EPOCHS=5
 	export BATCH_SIZE=1

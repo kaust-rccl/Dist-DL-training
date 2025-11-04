@@ -21,11 +21,11 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 # Wandb offline logging
 export WANDB_MODE=offline
-export EXPERIMENT="${EXPERIMENT_NAME}"
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
-export WANDB_RUN_ID=${EXPERIMENT_NAME}
-export WANDB_NAME=${EXPERIMENT_NAME}
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 
 # Distributed setup
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
