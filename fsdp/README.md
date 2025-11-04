@@ -260,22 +260,19 @@ Upon job completion, expect the following artifacts:
 	{'eval_loss': 1.7790, 'eval_runtime': 1.2682, 'eval_samples_per_second': 39.427, ... 'epoch': 2.93}
 	{'train_runtime': 125.2999, 'train_samples_per_second': 11.971, 'train_steps_per_second': 0.742, 'train_loss': 0.7039, 'epoch': 2.93}
 	```
-3. Populate the Results Table:
-    | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
-    |--------------------------------|-----------------------------------------------------------|----------------|
-    | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
-    | Eval Loss (Epoch 1)            | First `eval_loss` where `'epoch': 1.0`                    |                |
-    | Eval Loss (Epoch 2)            | `eval_loss` where `'epoch': 2.0`                          |                |
-    | Eval Loss (Epoch 3)            | Final `eval_loss` (e.g. where `'epoch': 3.0`)            |                |
-    | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
-    | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
-    | Steps per Epoch                | From the progress bar.         |                |
-    | Memory Allocated (MB)           | _From logs_     					|
-	| GPU Utilization (%)             | _From logs_   
-	_Note_: Replace the placeholders in the "Your Value" column with the actual values extracted from your logs.
+ 3. Populate the Results Table:
+    
+     | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
+     |--------------------------------|-----------------------------------------------------------|----------------|
+     | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
+     | Eval Loss (Epoch 5)            | Final `eval_loss` (e.g. where `'epoch': 4.93`)            |                |
+     | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
+     | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
+     | Steps per Epoch                | From the progress bar.                                    |                |
+     | Peak Memory Allocated (MB)     | _From logs_     					                                     |                |
+     | Peak GPU Utilization (%)       | _From logs_                                               |                |
 
-
-
+4. _Note_: Replace the placeholders in the "Your Value" column with the actual values extracted from your logs.
 
 ## 📊 Monitoring and Results
 
@@ -883,7 +880,7 @@ Edit `env_vars.sh` to set up your environment:
 	# Model and training parameters
 	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
 	export MAX_LENGTH=512
-	export TRAIN_SIZE=250
+	export TRAIN_SIZE=500
 	export EVAL_SIZE=100
 	export NUM_EPOCHS=5
 	export BATCH_SIZE=1
