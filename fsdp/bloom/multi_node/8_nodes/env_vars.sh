@@ -1,7 +1,7 @@
 # Conda setup
 export CONDA_ENV="bloom_env"
 
-# Wandb/offline‐run settings
+# Wandb/online‐run settings
 export EXPERIMENT_NAME="BLOOM_Multi_Nodes_8_NODES"
 export LOG_DIR="$PWD/logs"
 export WANDB_API_KEY="your_wandb_api_key"

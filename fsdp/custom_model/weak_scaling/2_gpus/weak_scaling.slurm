@@ -19,8 +19,8 @@ conda activate ${CONDA_ENV}
 
 export CUDA_VISIBLE_DEVICES=0,1
 
-# Wandb offline logging
-export WANDB_MODE=offline
+# Wandb online logging
+export WANDB_MODE=online
 export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
@@ -42,7 +42,4 @@ srun --nodes=1 --ntasks=1 --gpus=2 \
        weak_scaling.py
 
 
-# Post-training: sync with Wandb
-wandb online
-cd ${WANDB_DIR}
-wandb sync --include-offline --sync-all
+

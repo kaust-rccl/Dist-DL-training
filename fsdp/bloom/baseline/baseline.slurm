@@ -17,8 +17,8 @@ source env_vars.sh
 source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate ${CONDA_ENV}
 
-# Setup Wandb offline logging
-export WANDB_MODE=offline
+# Setup Wandb online logging
+export WANDB_MODE=online
 export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
@@ -31,7 +31,3 @@ export WANDB_API_KEY=${WANDB_API_KEY}
 # Execute fine-tuning script
 python baseline.py
 
-# After training: sync offline logs to Wandb cloud
-wandb online
-cd $WANDB_DIR
-wandb sync --include-offline --sync-all

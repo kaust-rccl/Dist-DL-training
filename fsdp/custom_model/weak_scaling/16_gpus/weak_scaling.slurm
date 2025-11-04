@@ -22,8 +22,8 @@ export NCCL_IB_HCA=mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export TORCH_NCCL_BLOCKING_WAIT=1
 
-# Wandb offline logging
-export WANDB_MODE=offline
+# Wandb online logging
+export WANDB_MODE=online
 export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
@@ -64,7 +64,4 @@ for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
 done
 wait
 
-# Post-training: sync with Wandb
-wandb online
-cd ${WANDB_DIR}
-wandb sync --include-offline --sync-all
+

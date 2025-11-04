@@ -157,7 +157,7 @@ Instead of writing your own training loop with forward(), backward(), optimizer 
     
 -   Activates `bloom_env`.
     
--   Sets WandB to offline mode and chooses a run name via `$EXPERIMENT_NAME`.
+-   Sets WandB to online mode and chooses a run name via `$EXPERIMENT_NAME`.
     
 -   Runs `python baseline.py`.
     

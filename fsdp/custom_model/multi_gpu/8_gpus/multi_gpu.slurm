@@ -18,8 +18,8 @@ torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 source $torch_fsdpenv
 conda activate ${CONDA_ENV}
 
-# Wandb offline logging
-export WANDB_MODE=offline
+# Wandb online logging
+export WANDB_MODE=online
 export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
@@ -40,7 +40,4 @@ srun --nodes=1 --ntasks=1 --gpus=8 \
        --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
        multi_gpu.py
 
-# Post-training: sync with Wandb
-wandb online
-cd ${WANDB_DIR}
-wandb sync --include-offline --sync-all
+

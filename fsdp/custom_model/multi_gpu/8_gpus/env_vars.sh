@@ -1,7 +1,7 @@
 # Conda setup
 export CONDA_ENV="bloom_env"
 
-# Wandb/offline‐run settings
+# Wandb/online‐run settings
 export EXPERIMENT_NAME="Custom_Model_Multi_GPUS_8_GPUs"
 export LOG_DIR="$PWD/logs"
 export WANDB_API_KEY="your_wandb_api_key"
