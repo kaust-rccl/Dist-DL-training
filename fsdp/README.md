@@ -512,6 +512,7 @@ These environment variables configure distributed training manually.
 	
 ### 📋 Results Table
 Populate the following table with the metrics extracted from your experiments:
+
 |          Setup          | Total GPUs | Samples/s | Samples/s Scale Factor | Runtime (s) | Runtime Scale Factor | Loss | GPU Memory Allocated (GB) |
 |:-----------------------:|:----------:|:---------:|:----------------------:|:-----------:|:--------------------:|:----:|:-------------------------:|
 | Single Node, Single GPU |            |           |                        |             |                      |      |                           |
@@ -743,6 +744,7 @@ Start one training process per node using `srun` and `torch.distributed.launch`:
     
 ### 📋 Results Table
 Populate the following table with the metrics extracted from your experiments:
+
 |          Setup          | Total GPUs | Samples/s | Samples/s Scale Factor | Runtime (s) | Runtime Scale Factor | Loss | GPU Memory Allocated (GB) |
 |:-----------------------:|:----------:|:---------:|:----------------------:|:-----------:|:--------------------:|:----:|:-------------------------:|
 | Single Node|            |           |                        |             |                      |      |                           |
