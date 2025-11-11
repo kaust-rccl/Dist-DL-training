@@ -92,8 +92,14 @@ conda activate bloom_env
 	print("PyTorch version :", torch.__version__, " |  CUDA:", torch.version.cuda)
 	print("System          :", platform.platform())
 	PY
-----------------------------------
 You should see `CUDA available : True`.
+
+**Step 3 - Set up your Weights & Biases API key**
+```commandline
+./wandb_update.sh "<your_api_key>"
+```
+---
+
 # Baseline: BLOOM Fine-tuning without FSDP:
 
 ## Fine-Tuning Setup
@@ -160,8 +166,6 @@ Instead of writing your own training loop with forward(), backward(), optimizer 
 -   Sets WandB to online mode and chooses a run name via `$EXPERIMENT_NAME`.
     
 -   Runs `python baseline.py`.
-    
--   After the job it flips WandB back to online and syncs cached runs.
 
 ### Bringing It All Together: Running the Baseline Fine-Tuning Experiment
 
@@ -191,47 +195,30 @@ This exercise helps you develop a habit of tracking key metrics like training lo
 ## Part 1: Run the Baseline Fine-Tuning Job
 ### Steps:
 
- 1. Navigate to the baseline directory:  
+1. Navigate to the baseline directory:  
 
-	```commandline
-	cd bloom/baseline
-	```
- 2. **Modify `env_vars.sh`:**
+   ```commandline
+   cd bloom/baseline
+   ```
+2. Submit the SLURM job:
 
-	Ensure the following variables are correctly set:
+   ```commandline
+   sbatch baseline.slurm
+   ```
+   This script will:
 
-	-   **`WANDB_API_KEY`**: Replace with your personal WandB API key.
+   -   Activate the `bloom_env` Conda environment.
 	    
-	-   **`EXPERIMENT_NAME`**: Set a descriptive name for the experiment.
+   -   Launch `baseline.py` with the specified configurations.
 	    
-	-   **`LOG_DIR`**: Confirm the path exists and is writable.
-    
+   -   Log outputs to the designated `LOG_DIR`.
 
-	Example:
-	```commandline
-	export WANDB_API_KEY="your_actual_wandb_key"
-	export EXPERIMENT_NAME="BLOOM_Baseline"
-	export LOG_DIR="/ibex/user/your_username/Dist-DL-training/fsdp/bloom/baseline/logs"
-	```
- 3. Submit the SLURM job:
-
-	```commandline
-	sbatch baseline.slurm
-	```
-	This script will:
-
-	-   Activate the `bloom_env` Conda environment.
-	    
-	-   Launch `baseline.py` with the specified configurations.
-	    
-	-   Log outputs to the designated `LOG_DIR`.
-
- 4. Monitor the job: 
-	 After submission, monitor the job's status:
- 	```commandline
-	squeue --me
-	```
-	Once completed, proceed to the next step.
+3. Monitor the job: 
+    After submission, monitor the job's status:
+    ```commandline
+   squeue --me
+   ```
+   Once completed, proceed to the next step.
 	
 ## 📄 Output Artifacts
 
@@ -358,35 +345,8 @@ Your project directory is organized as follows:
 For example, to use 2 gpus:
 
 	cd bloom/multi_gpu/2_gpus
-### 2. Configure Environment Variables
 
-Edit the `env_vars.sh` file to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="BLOOM_Multi_GPUS_2_GPUs"
-	export LOG_DIR="/path/to/multi_gpu/2_gpus/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export MODEL_NAME="bigscience/bloom-560m"
-	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=250
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=False
-	export BF16=False
-**Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the training job using the provided SLURM script:
 
@@ -563,36 +523,7 @@ For example, to use 2 nodes:
 
 	cd bloom/multi_node/2_nodes
 
-### 2. Configure Environment Variables
-
-Edit the `env_vars.sh` file to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="BLOOM_Multi_Node_2_Nodes"
-	export LOG_DIR="/path/to/multi_node/2_nodes/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export MODEL_NAME="bigscience/bloom-560m"
-	export OUTPUT_DIR="/path/to/multi_node/2_nodes/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=250
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=False
-	export BF16=False
-
-**Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the training job using the provided SLURM script:
 
@@ -792,22 +723,17 @@ This document details the fine-tuning of a custom GPT-like model, implemented us
 
 ### Steps:
 
- 1.  Navigate to the single node directory:
+ 1. Navigate to the single node directory:
 
-		cd custom_model/single_node
+        cd custom_model/single_node
 
- 2.  Modify `env_vars.sh`:
-    
+ 2. Submit the SLURM job:
 
-		Ensure variables like `WANDB_API_KEY`, `EXPERIMENT_NAME`, `LOG_DIR`, and model parameters are correctly set.
+        sbatch single_node.slurm
 
- 3. Submit the SLURM job:
+ 3. Monitor the job:
 
-		sbatch single_node.slurm
-
- 4. Monitor the job:
-
-		squeue --me
+        squeue --me
 	
 ### Output Artifacts
 
@@ -866,42 +792,7 @@ Example, using 2 GPUs:
 
 	cd custom_model/multi_gpu/2_gpus
 
-### 2. Configure Environment Variables
-
-Edit `env_vars.sh` to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="Custom_Model_Multi_GPUS_2_GPUs"
-	export LOG_DIR="/path/to/multi_gpu/2_gpus/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=False
-	export BF16=False
-
-	# Model architecture parameters
-	export VOCAB_SIZE=50000          # tokenizer vocabulary size
-	export HIDDEN_SIZE=2048          # embedding & transformer hidden size
-	export NUM_LAYERS=3              # transformer layers depth
-	export NUM_HEADS=16              # attention heads per layer
-	export FF_DIM=8192               # transformer feed-forward dimension
-	export SEQ_LENGTH=512            # max sequence length
-**Note:** Replace `/path/to/` and `your_wandb_api_key` with your actual paths and WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the job using:
 
