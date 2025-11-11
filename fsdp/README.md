@@ -42,12 +42,12 @@ You will fine-tune the **BLOOM-560 M** language model on a subset of **SQuAD v1.
 It provides easy-to-use tools to **download, train, fine-tune, and deploy** state-of-the-art models with just a few lines of code.
 ### 🔧 Key Components You'll Use
 
-| Component    | What It Does                                                                 |
-|--------------|-------------------------------------------------------------------------------|
-|`transformers` | Python library for accessing thousands of pre-trained models across NLP, vision, and audio tasks. |
-|`datasets`    | Library for easy loading, sharing, and preprocessing of public datasets like SQuAD, IMDB, and more. |
-|`Trainer` API | High-level training interface to handle training, evaluation, and checkpointing with minimal code. |
-| Model Hub    | Online platform for hosting, sharing, and downloading models — all ready to use. |
+| Component      | What It Does                                                                                        |
+|----------------|-----------------------------------------------------------------------------------------------------|
+| `transformers` | Python library for accessing thousands of pre-trained models across NLP, vision, and audio tasks.   |
+| `datasets`     | Library for easy loading, sharing, and preprocessing of public datasets like SQuAD, IMDB, and more. |
+| `Trainer` API  | High-level training interface to handle training, evaluation, and checkpointing with minimal code.  |
+| Model Hub      | Online platform for hosting, sharing, and downloading models — all ready to use.                    |
 
 ---
 In this workshop, you’ll:
@@ -385,6 +385,12 @@ This restricts the training processes to the specified GPUs.
 In your training script (`multi_gpu.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
@@ -392,7 +398,10 @@ In your training script (`multi_gpu.py`), FSDP is configured as follows:
 	}
 
 **Explanation of Parameters:**
-
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 -   `transformer_layer_cls_to_wrap`: Specifies the transformer layers to wrap with FSDP. In this case, `BloomBlock` layers. 
 	- Analysis of the Bloomz-560m architecture reveals that approximately **80%** of the total 560 million parameters are concentrated in the transformer layers (i.e. the BloomBlock layers).
     
@@ -555,13 +564,23 @@ To allocate resources across multiple nodes, include the following directives in
 In your training script (`multi_node.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
 	    "sync_module_states": True
 	}
-**Explanation of Parameters:**
 
+**Explanation of Parameters:**
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 -   `transformer_layer_cls_to_wrap`: Specifies the transformer layers to wrap with FSDP. In this case, `BloomBlock` layers.
     
     -   Analysis of the Bloomz-560m architecture reveals that approximately **80%** of the total 560 million parameters are concentrated in the transformer layers (i.e., the BloomBlock layers).
@@ -827,13 +846,23 @@ Key configurations:
 In your training script (`multi_gpu.py`), FSDP configuration is set as:
 
 	fsdp_cfg = {
-	    "transformer_layer_cls_to_wrap": ["torch.nn.modules.transformer.TransformerEncoderLayer"],
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
+	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
-	    "sync_module_states": True,
+	    "sync_module_states": True
 	}
 
-### Explanation of Parameters:
+**Explanation of Parameters:**
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 
 -   **`transformer_layer_cls_to_wrap`**:
     
