@@ -51,15 +51,6 @@ master_ip=$(srun -n1 -N1 -w ${head_node} hostname -I | cut -d " " -f2)  # Fetch 
 master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')  # Find a free TCP port dynamically
 echo "Master endpoint: ${master_ip}:${master_port}"
 
-# -------------------------------------------
-# Use node-local scratch for caches (per job)
-# -------------------------------------------
-export HF_DATASETS_CACHE=/tmp/$USER/hf_datasets/$SLURM_JOB_ID
-export TRANSFORMERS_CACHE=/tmp/$USER/hf_models/$SLURM_JOB_ID
-export HF_HOME=/tmp/$USER/hf_home/$SLURM_JOB_ID
-export TOKENIZERS_PARALLELISM=false
-export ARROW_USE_MMAP=0
-
 # ----------------------------
 # Launch one process per node
 # ----------------------------
@@ -69,7 +60,6 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
          --gpus=${SLURM_GPUS_PER_NODE}\
          -w ${nodes_array[$i]} \
          bash -c "
-        mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE" "$HF_HOME"
         hostname=\$(hostname)                                                      # Capture this node's hostname
         nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total \
                    --format=csv,nounits -l 5 \
