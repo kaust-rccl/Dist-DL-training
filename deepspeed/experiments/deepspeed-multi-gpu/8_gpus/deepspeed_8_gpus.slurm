@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=8                                    # 8 GPUs per node
 #SBATCH --mem=32G                                            # Request 32 GB of system memory
 #SBATCH --constraint=v100                                    # Request specific GPU type (V100)
-#SBATCH --time=12:00:00                                      # Maximum runtime (HH:MM:SS)
+#SBATCH --time=01:00:00                                      # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                               # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
@@ -28,7 +28,7 @@ CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"mkdir -p "$LOG_OUT_DIR" "$GPU_LO
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/x_mohameta/miniforge/etc/profile.d/conda.sh
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate deepspeed-finetune
 module load cuda/12.4.1
 
@@ -43,7 +43,7 @@ GPU_LOG_PID=$!
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero0.json &
+python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
 
 TRAIN_PID=$!
 

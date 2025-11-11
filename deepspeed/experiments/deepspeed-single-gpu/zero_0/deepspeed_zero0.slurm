@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=1                      # GPUs per node
 #SBATCH --mem=32G                              # Request 32 GB of system memory
 #SBATCH --constraint=v100                      # Request specific GPU type (V100)
-#SBATCH --time=12:00:00                        # Maximum runtime (HH:MM:SS)
+#SBATCH --time=01:00:00                        # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                 # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
@@ -29,7 +29,7 @@ mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/x_mohameta/miniforge/etc/profile.d/conda.sh
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate deepspeed-finetune
 module load cuda/12.4.1
 
