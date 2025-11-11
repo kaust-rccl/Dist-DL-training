@@ -382,7 +382,7 @@ Edit the `env_vars.sh` file to set up your environment:
 	export LEARNING_RATE=5e-5
 	export WEIGHT_DECAY=0.01
 	export GRAD_ACC=4
-	export FP16=True
+	export FP16=False
 	export BF16=False
 **Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
 
@@ -587,7 +587,7 @@ Edit the `env_vars.sh` file to set up your environment:
 	export LEARNING_RATE=5e-5
 	export WEIGHT_DECAY=0.01
 	export GRAD_ACC=4
-	export FP16=True
+	export FP16=False
 	export BF16=False
 
 **Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
@@ -889,7 +889,7 @@ Edit `env_vars.sh` to set up your environment:
 	export LEARNING_RATE=5e-5
 	export WEIGHT_DECAY=0.01
 	export GRAD_ACC=4
-	export FP16=True
+	export FP16=False
 	export BF16=False
 
 	# Model architecture parameters

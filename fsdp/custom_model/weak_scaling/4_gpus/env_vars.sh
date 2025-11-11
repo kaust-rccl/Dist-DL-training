@@ -17,7 +17,7 @@ export BATCH_SIZE=4
 export LEARNING_RATE=5e-5
 export WEIGHT_DECAY=0.01
 export GRAD_ACC=1
-export FP16=True
+export FP16=False
 export BF16=False
 
 # ── Model architecture ───────────────────────────────
