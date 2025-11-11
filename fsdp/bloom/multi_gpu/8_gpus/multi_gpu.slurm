@@ -6,24 +6,24 @@
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks=8
 #SBATCH --tasks-per-node=8
-#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai
+#SBATCH --constraint=v100
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00                	   # HH:MM:SS
-#SBATCH --mem=0		                   # Memory per node
+#SBATCH --mem=0 		           # Memory per node
 
 source env_vars.sh
 
 # Activate environment
-source ${CONDA_SH_PATH}
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate ${CONDA_ENV}
 
-# Wandb offline logging
-export WANDB_MODE=offline
-export EXPERIMENT="${EXPERIMENT_NAME}"
+# Wandb online logging
+export WANDB_MODE=online
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
-export WANDB_RUN_ID=${EXPERIMENT_NAME}
-export WANDB_NAME=${EXPERIMENT_NAME}
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 
 # Distributed setup
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
