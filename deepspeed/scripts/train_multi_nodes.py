@@ -77,7 +77,6 @@ print(f"Loading subset_size = {subset_size} examples")
 
 # Load the dataset with the computed subset size
 tokenized_datasets = load_squad(subset_size=subset_size)
-tokenized_datasets = load_squad(subset_size=1000)
 
 # -------------------------------
 # 3. Create Data Collator

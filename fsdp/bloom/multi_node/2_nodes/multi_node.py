@@ -128,13 +128,20 @@ def main():
     model = BloomForCausalLM.from_pretrained(MODEL_NAME)
     data_collator = DataCollatorForSeq2Seq(tokenizer,model=model,label_pad_token_id=-100)
 
-    fsdp_cfg={"transformer_layer_cls_to_wrap":["BloomBlock"],
-            "backward_prefetch":"backward_post",
-            "forward_prefetch":True,
-            "sync_module_states":True,
-            "state_dict_type": "sharded_state_dict",
-            "offload_to_cpu": True,
-            }
+    fsdp_cfg={
+        "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
+        "transformer_layer_cls_to_wrap":["BloomBlock"],
+        "backward_prefetch":"backward_post",
+        "forward_prefetch":True,
+        "sync_module_states":True,
+        "state_dict_type": "sharded_state_dict",
+        "offload_to_cpu": True,
+        }
 
     training_args=TrainingArguments(
         output_dir=OUTPUT_DIR,

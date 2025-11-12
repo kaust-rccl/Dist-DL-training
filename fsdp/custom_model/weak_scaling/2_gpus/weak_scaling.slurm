@@ -4,28 +4,28 @@
 #SBATCH --error=logs/custom_weak_scaling_2_%j.err
 #SBATCH --ntasks=2		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
 #SBATCH --ntasks-per-node=2		           # Processes per node
-#SBATCH --gpus-per-node=8		           # GPUs per node
-#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai
+#SBATCH --gpus-per-node=2     		           # GPUs per node
+#SBATCH --constraint=v100
 #SBATCH --cpus-per-task=4		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
-#SBATCH --mem=0		                           # Memory per node
+#SBATCH --mem=64G	                           # Memory per node
 
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=${CONDA_SH_PATH}
+torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 source $torch_fsdpenv
 conda activate ${CONDA_ENV}
 
 export CUDA_VISIBLE_DEVICES=0,1
 
-# Wandb offline logging
-export WANDB_MODE=offline
-export EXPERIMENT="${EXPERIMENT_NAME}"
+# Wandb online logging
+export WANDB_MODE=online
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
-export WANDB_RUN_ID=${EXPERIMENT_NAME}
-export WANDB_NAME=${EXPERIMENT_NAME}
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_API_KEY=${WANDB_API_KEY}
 
 # Distributed setup
@@ -42,7 +42,4 @@ srun --nodes=1 --ntasks=1 --gpus=2 \
        weak_scaling.py
 
 
-# Post-training: sync with Wandb
-wandb online
-cd ${WANDB_DIR}
-wandb sync --include-offline --sync-all
+
