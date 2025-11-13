@@ -37,7 +37,7 @@ export SLURM_GPUS_PER_NODE=8
 srun --nodes=1 --ntasks=1 --gpus=8 \
      python -m torch.distributed.launch --use_env \
        --nproc_per_node=8 \
-       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
        multi_gpu.py
 
 

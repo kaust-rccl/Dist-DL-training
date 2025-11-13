@@ -37,7 +37,7 @@ export WORLD_SIZE=4
 srun --nodes=1 --ntasks=1 --gpus=4 \
      python -m torch.distributed.launch --use_env \
        --nproc_per_node=4 \
-       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
        multi_gpu.py
 
 # Post-training: sync with Wandb cloud

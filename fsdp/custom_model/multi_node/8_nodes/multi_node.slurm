@@ -87,7 +87,7 @@ for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
          python -m torch.distributed.launch --use_env \
             --nproc_per_node=1 \
             --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
             multi_node.py &
 done
 wait
