@@ -23,6 +23,9 @@ Get the API Key from W&B Website
 1. Go to: https://wandb.ai/authorize
 
 2. You will see a page displaying your personal API key:
+
+    ![Wandb API Key](./wandb_api_key.jpg "Wandb API Key")
+
 3. Copy the key.
 
 ## 3.Add Your API Key to Your Environment
