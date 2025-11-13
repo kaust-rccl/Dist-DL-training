@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=1ZO-2G1N                                  # Name of the job shown in SLURM queue
-#SBATCH --ntasks=1                                           # Number of tasks
-#SBATCH --tasks-per-node=1                                   # One task per node
+#SBATCH --ntasks=2                                           # Number of tasks
+#SBATCH --tasks-per-node=2                                   # One task per node
 #SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
 #SBATCH --gpus=2                                             # Request 2 GPU
 #SBATCH --gpus-per-node=2                                    # 2 GPUs per node

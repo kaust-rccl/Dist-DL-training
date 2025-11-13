@@ -400,10 +400,10 @@ DeepSpeed still initializes and applies all runtime optimizations through its in
 `Trainer` API.
 
 To ensure DeepSpeed is activated, pass the config file using the `--deepspeed` argument when launching the script:
-
 ```bash
-python scripts/train.py --deepspeed ./<ds_config>.json
+python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ./<ds_config>.json
 ```
+>You need an explicit `rdzv endpoint` so all distributed processes can find each other and to avoid port collisions with the default address (29500) when multiple runs launch simultaneously.
 
 ### Modification to `TrainingArguments`
 
@@ -604,7 +604,7 @@ psrecord:
 1. **Background the Training job:**
     ```
    # Launch the training script with DeepSpeed in the background
-   python scripts/train.py --deepspeed <ds_config>.json &
+   python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed <ds_config>.json &
    # Capture the PID of the DeepSpeed training process for later monitoring or cleanup
    TRAIN_PID=$!
    ```
@@ -734,7 +734,7 @@ These environment variables configure distributed training manually.
 #### Step 3: Use the Python Launcher with
 
 ```commandline
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
+python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
 ```
 
 This command launches **distributed training** on **all GPUs in the current node**, using PyTorch’s recommended
