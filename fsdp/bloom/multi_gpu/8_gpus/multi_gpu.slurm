@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=multi_gpu_8
+#SBATCH --job-name=F-B-8G1N
 #SBATCH --output=logs/multi_gpu_8_%j.out
 #SBATCH --error=logs/multi_gpu_8_%j.err            
 #SBATCH --gpus=8

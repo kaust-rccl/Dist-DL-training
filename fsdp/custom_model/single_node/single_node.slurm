@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=single_custom                      
+#SBATCH --job-name=F-C-1G1N
 #SBATCH --output=logs/single_custom_%j.out
 #SBATCH --error=logs/single_custom_%j.err 
 #SBATCH --gpus=1

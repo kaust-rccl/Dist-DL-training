@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=custom_weak_scaling_16
+#SBATCH --job-name=F-C-16G2N
 #SBATCH --output=logs/custom_weak_scaling_16_%j.out
 #SBATCH --error=logs/custom_weak_scaling_16_%j.err
 #SBATCH --ntasks=16		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
