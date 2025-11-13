@@ -17,24 +17,24 @@
 #    - Logs are automatically written to the /log directory
 #      as defined inside each .slurm script.
 #======================================================================#
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ---------------------- V100 CHECKS ------------------------
 # These scripts target the V100 GPU partition.
 echo "[V100] Submitting single-GPU check..."
-sbatch single_v100_gpu.slurm
+sbatch "${SCRIPT_DIR}/single_v100_gpu.slurm"
 echo "[V100] Submitting multi-GPU (same node) check..."
-sbatch multi_v100_gpus.slurm
+sbatch "${SCRIPT_DIR}/multi_v100_gpus.slurm"
 echo "[V100] Submitting multi-node check..."
-sbatch multi_v100_nodes.slurm
+sbatch "${SCRIPT_DIR}/multi_v100_nodes.slurm"
 
 # ---------------------- A100 CHECKS ------------------------
 # These scripts target the A100 GPU partition.
 echo "[A100] Submitting single-GPU check..."
-sbatch single_a100_gpu.slurm
+sbatch "${SCRIPT_DIR}/single_a100_gpu.slurm"
 echo "[A100] Submitting multi-GPU (same node) check..."
-sbatch multi_a100_gpus.slurm
+sbatch "${SCRIPT_DIR}/multi_a100_gpus.slurm"
 echo "[A100] Submitting multi-node check..."
-sbatch multi_a100_nodes.slurm
+sbatch "${SCRIPT_DIR}/multi_a100_nodes.slurm"
 
 # ---------------------- SUMMARY ----------------------------
 # Print a footer message with a reminder to check logs.
