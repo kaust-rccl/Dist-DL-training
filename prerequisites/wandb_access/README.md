@@ -1,0 +1,47 @@
+# Weights & Biases (W&B) Account & API Key Setup Guide
+To run the workshop training scripts, each participant must have a W&B API key.
+This key allows the training jobs to log metrics, loss curves, GPU usage, and artifacts to each participant’s personal W&B account.
+
+Follow the steps below to create an account and obtain your API key.
+
+## 1. Create a Weights & Biases Account
+
+   1. Open:
+   https://wandb.ai/siteClick 
+
+   2. Click Sign Up.
+   3. Sign up with your KAUST email.
+   4. Complete the initial registration steps.
+
+You now have a W&B account.
+
+## 2. Retrieve Your W&B API Key
+
+Your W&B API key is what authenticates your account inside the training scripts.
+Get the API Key from W&B Website
+
+1. Go to: https://wandb.ai/authorize
+
+2. You will see a page displaying your personal API key:
+3. Copy the key.
+
+## 3.Add Your API Key to Your Environment
+
+Inside the cluster environment, export your key before starting training
+To make it persistent across sessions, add this line to your ~/.bashrc:
+```commandline
+echo 'export WANDB_API_KEY="your-api-key-here"' >> ~/.bashrc
+```
+Then reload:
+```commandline
+source ~/.bashrc
+```
+## 4. Verify Your Authentication
+Run:
+```commandline
+wandb login
+```
+You should see:
+```commandline
+Successfully logged in to Weights & Biases!
+```
