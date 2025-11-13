@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=zero1-cpu-offload-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=1ZO-1G1N                    # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                             # Number of tasks
 #SBATCH --tasks-per-node=1                     # One task per node
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task

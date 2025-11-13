@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=2-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
+#SBATCH --job-name=2ZO-4G2N                                      # SLURM job name
 #SBATCH --nodes=2                                                # Number of nodes to allocate
 #SBATCH --ntasks=4                                               # Number of tasks
 #SBATCH --ntasks-per-node=2                                      # 2 tasks (process) per node

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=2-gpus-zero2-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=2Z-2G1N                                   # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                                           # Number of tasks
 #SBATCH --tasks-per-node=1                                   # One task per node
 #SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
@@ -23,7 +23,9 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
-CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
+
+mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
 # ------------------------------
 # Environment Setup
