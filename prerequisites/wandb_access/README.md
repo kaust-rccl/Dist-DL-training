@@ -29,6 +29,7 @@ Get the API Key from W&B Website
 3. Copy the key.
 
 ## 3.Add Your API Key to Your Environment
+#TODO : no bash rc
 
 Inside the cluster environment, export your key before starting training
 To make it persistent across sessions, add this line to your ~/.bashrc:
