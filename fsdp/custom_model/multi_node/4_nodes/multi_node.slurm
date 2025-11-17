@@ -28,6 +28,14 @@ export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_API_KEY=${WANDB_API_KEY}
 
+# Export caching to user space
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+
 module purge
 module load cuda/11.8 nccl/2.17.1-cuda11.8 openmpi/4.1.4/gnu11.2.1-cuda11.8
 
