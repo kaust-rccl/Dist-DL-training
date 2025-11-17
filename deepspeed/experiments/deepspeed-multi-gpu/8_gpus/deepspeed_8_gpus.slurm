@@ -24,8 +24,14 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
-
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
 
 # ------------------------------
 # Environment Setup
