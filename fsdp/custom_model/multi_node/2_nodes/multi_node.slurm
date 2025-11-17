@@ -7,7 +7,7 @@
 #SBATCH --ntasks=2
 #SBATCH --tasks-per-node=1
 #SBATCH --constraint=v100       
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --cpus-per-task=8		           # CPU cores per process
 #SBATCH --time=00:30:00                            # HH:MM:SS
 #SBATCH --mem=64G                                  # Memory per node
 
@@ -81,13 +81,13 @@ export OMP_NUM_THREADS=1
 
 for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
     srun --nodes=1 --ntasks=1 \
-         --gpus=1 \
+         --gpus=${SLURM_GPUS_PER_NODE} \
          --cpus-per-task=${SLURM_CPUS_PER_TASK} \
          -w ${nodes_array[$i]} \
          python -m torch.distributed.launch --use_env \
-            --nproc_per_node=1 \
+            --nproc_per_node=${SLURM_GPUS_PER_NODE} \
             --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
+            --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
             multi_node.py &
 done
 wait

@@ -2,11 +2,11 @@
 #SBATCH --job-name=F-C-16G2N
 #SBATCH --output=logs/custom_weak_scaling_16_%j.out
 #SBATCH --error=logs/custom_weak_scaling_16_%j.err
-#SBATCH --ntasks=16		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
-#SBATCH --ntasks-per-node=8		           # Processes per node
+#SBATCH --ntasks=2		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
+#SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus-per-node=8		           # GPUs per node
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --cpus-per-task=32		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=0		                           # Memory per node
 

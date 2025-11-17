@@ -2,12 +2,12 @@
 #SBATCH --job-name=F-C-2G1N
 #SBATCH --output=logs/custom_multi_gpu_2_%j.out
 #SBATCH --error=logs/custom_multi_gpu_2_%j.err
-#SBATCH --ntasks=2		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
-#SBATCH --ntasks-per-node=2		           # Processes per node
+#SBATCH --ntasks=1		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
+#SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus=2
 #SBATCH --gpus-per-node=2		           # GPUs per node
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --cpus-per-task=8		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=64G                                  # Memory per node
 
@@ -36,10 +36,10 @@ export MASTER_ADDR=${master_addr}
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
 export SLURM_GPUS_PER_NODE=2
 
-srun --nodes=1 --ntasks=1 --gpus=2 \
+srun --nodes=1 --ntasks=1 --gpus=${SLURM_GPUS_PER_NODE} \
      python -m torch.distributed.launch --use_env \
-       --nproc_per_node=2 \
-       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
+       --nproc_per_node=${SLURM_GPUS_PER_NODE} \
+       --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
        multi_gpu.py
 
 

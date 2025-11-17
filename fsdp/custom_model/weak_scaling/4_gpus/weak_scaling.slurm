@@ -2,11 +2,11 @@
 #SBATCH --job-name=F-C-4G1N
 #SBATCH --output=logs/custom_weak_scaling_4_%j.out
 #SBATCH --error=logs/custom_weak_scaling_4_%j.err
-#SBATCH --ntasks=4		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
-#SBATCH --ntasks-per-node=4		           # Processes per node
+#SBATCH --ntasks=1		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
+#SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus-per-node=4		           # GPUs per node
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --cpus-per-task=16		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=64G	                           # Memory per node
 
@@ -35,9 +35,9 @@ export MASTER_ADDR=${master_addr}
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
 export SLURM_GPUS_PER_NODE=4
 
-srun --nodes=1 --ntasks=1 --gpus=4 \
+srun --nodes=1 --ntasks=1 --gpus=${SLURM_GPUS_PER_NODE} \
      python -m torch.distributed.launch --use_env \
-       --nproc_per_node=4 \
+       --nproc_per_node=${SLURM_GPUS_PER_NODE} \
        --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
        weak_scaling.py
 
