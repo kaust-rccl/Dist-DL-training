@@ -4,10 +4,10 @@
 #SBATCH --error=logs/multi_gpu_8_%j.err            
 #SBATCH --gpus=8
 #SBATCH --gpus-per-node=8
-#SBATCH --ntasks=8
-#SBATCH --tasks-per-node=8
+#SBATCH --ntasks=1
+#SBATCH --tasks-per-node=1
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=32
 #SBATCH --time=01:00:00                	   # HH:MM:SS
 #SBATCH --mem=0 		           # Memory per node
 
@@ -31,10 +31,10 @@ export MASTER_ADDR=$master_addr
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')   
 export WORLD_SIZE=8
 
-srun --nodes=1 --ntasks=1 --gpus=8 \
+srun --nodes=1 --ntasks=1 --gpus="${SLURM_GPUS_PER_NODE}" \
      python -m torch.distributed.launch --use_env \
-       --nproc_per_node=8 \
-       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
+       --nproc_per_node="${SLURM_GPUS_PER_NODE}" \
+       --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
        multi_gpu.py
 
 

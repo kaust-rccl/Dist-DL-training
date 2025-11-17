@@ -4,10 +4,10 @@
 #SBATCH --error=logs/multi_gpu_4_%j.err            
 #SBATCH --gpus=4
 #SBATCH --gpus-per-node=4
-#SBATCH --ntasks=4
-#SBATCH --tasks-per-node=4
+#SBATCH --ntasks=1
+#SBATCH --tasks-per-node=1
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=16
 #SBATCH --time=01:00:00                	   # HH:MM:SS
 #SBATCH --mem=64G	                   # Memory per node
 
@@ -34,10 +34,10 @@ export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)
 export WORLD_SIZE=4
 
 
-srun --nodes=1 --ntasks=1 --gpus=4 \
+srun --nodes=1 --ntasks=1 --gpus="${SLURM_GPUS_PER_NODE}" \
      python -m torch.distributed.launch --use_env \
-       --nproc_per_node=4 \
-       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
+       --nproc_per_node="${SLURM_GPUS_PER_NODE}" \
+       --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
        multi_gpu.py
 
 # Post-training: sync with Wandb cloud
