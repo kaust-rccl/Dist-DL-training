@@ -60,7 +60,9 @@ echo "Master endpoint: ${master_ip}:${master_port}"
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ds_configs/zero3_cpu_offload.json &
+python -m torch.distributed.run \
+--rdzv_endpoint="$master_ip":"$master_port" \
+scripts/train.py --deepspeed ds_configs/zero3_cpu_offload.json &
 
 TRAIN_PID=$!
 
@@ -79,4 +81,4 @@ kill $GPU_LOG_PID
 kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"

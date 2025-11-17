@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=2ZO-4G1N                                  # Name of the job shown in SLURM queue
-#SBATCH --ntasks=4                                           # Number of tasks
-#SBATCH --tasks-per-node=4                                   # One task per node
-#SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
+#SBATCH --ntasks=1                                           # Number of tasks
+#SBATCH --tasks-per-node=1                                   # One task per node
+#SBATCH --cpus-per-task=16                                    # Number of CPUs allocated per task
 #SBATCH --gpus=4                                             # Request 4 GPU
 #SBATCH --gpus-per-node=4                                    # 4 GPUs per node
 #SBATCH --mem=32G                                            # Request 32 GB of system memory
@@ -42,10 +42,20 @@ nvidia-smi \
   --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
 GPU_LOG_PID=$!
 
+export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
+export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 29500)
+export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
+export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
+export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
+
+
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
+python -m torch.distributed.run \
+ --nproc_per_node="$SLURM_GPUS_ON_NODE" \
+ --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
+ scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
 
 TRAIN_PID=$!
 
@@ -64,4 +74,4 @@ kill $GPU_LOG_PID
 kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"

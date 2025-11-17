@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=2ZO-16G2N                                     # SLURM job name
 #SBATCH --nodes=8                                                # Number of nodes to allocate
-#SBATCH --ntasks=16                                               # Number of tasks
-#SBATCH --ntasks-per-node=2                                      # 2 tasks (process) per node
-#SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
+#SBATCH --ntasks=8                                               # Number of tasks
+#SBATCH --ntasks-per-node=1                                      # 2 tasks (process) per node
+#SBATCH --cpus-per-task=8                                        # Number of CPU cores per task
 #SBATCH --gpus-per-node=2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=1ZO-2G1N                                  # Name of the job shown in SLURM queue
-#SBATCH --ntasks=2                                           # Number of tasks
-#SBATCH --tasks-per-node=2                                   # One task per node
-#SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
+#SBATCH --ntasks=1                                           # Number of tasks
+#SBATCH --tasks-per-node=1                                   # One task per node
+#SBATCH --cpus-per-task=8                                    # Number of CPUs allocated per task
 #SBATCH --gpus=2                                             # Request 2 GPU
 #SBATCH --gpus-per-node=2                                    # 2 GPUs per node
 #SBATCH --mem=32G                                            # Request 32 GB of system memory
@@ -52,7 +52,10 @@ export LOCAL_RANK=0                                                           # 
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} scripts/train.py --deepspeed ds_configs/zero1_cpu_offload.json &
+python -m torch.distributed.run \
+--nproc_per_node="$SLURM_GPUS_ON_NODE"  \
+--rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
+scripts/train.py --deepspeed ds_configs/zero1_cpu_offload.json &
 
 TRAIN_PID=$!
 
@@ -71,4 +74,4 @@ kill $GPU_LOG_PID
 kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"

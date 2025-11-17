@@ -53,14 +53,16 @@ echo "Node IDs of participating nodes: ${nodes_array[*]}"      # Print out the n
 # -----------------------------------------
 head_node="${nodes_array[0]}"                                           # Choose the first node as the master
 echo "Head node hostname: ${head_node}"
-master_ip=$(srun -n1 -N1 -w ${head_node} hostname -I | cut -d " " -f2)  # Fetch the IP address of the head node
+master_ip=$(srun -n1 -N1 -w "${head_node}" hostname -I | cut -d " " -f2)  # Fetch the IP address of the head node
 master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')  # Find a free TCP port dynamically
 echo "Master endpoint: ${master_ip}:${master_port}"
 
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ds_configs/zero2.json &
+python -m torch.distributed.run \
+--rdzv_endpoint="$master_ip":"$master_port" \
+scripts/train.py --deepspeed ds_configs/zero2.json &
 
 TRAIN_PID=$!
 
@@ -79,4 +81,4 @@ kill $GPU_LOG_PID
 kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"
