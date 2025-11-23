@@ -35,5 +35,5 @@ nemo llm import \
 model=mixtral_8x7b \
 source="hf://mistralai/Mixtral-8x7B-v0.1" \
 output_path="$MODEL_DIR" \
-overwrite=True\
+overwrite=True \
 --yes

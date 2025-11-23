@@ -35,5 +35,5 @@ nemo llm import \
 model=<NEMO_MODEL_NAME> \
 source="hf://<hf-org>/<hf-model-name>" \
 output_path="$MODEL_DIR" \
-overwrite=True\
+overwrite=True \
 --yes

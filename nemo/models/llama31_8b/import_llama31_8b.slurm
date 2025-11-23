@@ -35,5 +35,5 @@ nemo llm import \
 model=llama31_8b \
 source="hf://meta-llama/Llama-3.1-8B" \
 output_path="$MODEL_DIR" \
-overwrite=True\
+overwrite=True \
 --yes
