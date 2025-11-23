@@ -13,7 +13,7 @@ SCRIPT_PATH=$(scontrol show job "$SLURM_JOB_ID" | awk -F= '/Command=/{print $2}'
 SCRIPT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
 MODEL_DIR="$SCRIPT_DIR/model"
 mkdir -p "$MODEL_DIR"
-NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 CACHE_DIR=$NEMO_ROOT_DIR
 
 export TORCH_HOME="$CACHE_DIR/torch"
