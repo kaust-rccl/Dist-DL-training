@@ -36,8 +36,60 @@ prerequisites/
 └── prerequisites.md   # (this file)
 
 ```
+## 1. Hardware Requirements
 
-## Checklist (Complete Before Workshop)
+Participants must have access to:
+
+- **A laptop or workstation** with a stable terminal or SSH client.
+
+- **Linux/macOS**: native terminal is sufficient.
+
+- **A modern web browser** (Chrome, Firefox, or Edge) for Zoom.
+
+- **A headset and microphone** for communication during online sessions
+
+## 2. Network Access
+
+- Participants connecting **from outside KAUST** must ensure they have a working **KAUST VPN connection**.
+
+  - Verify VPN access at least one day before the workshop.
+
+- Test that you can connect to the IBEX login node via:
+
+    ```commandline
+    ssh username@glogin.ibex.kaust.edu.sa
+    ```
+
+## 3. IBEX Login and Environment Setup
+
+Before the workshop:
+
+- Ensure your **IBEX account is active and accessible**.
+
+  - If you don’t yet have access, request temporary credentials via the registration form.
+
+- Once logged in, clone the workshop materials:
+
+    ```commandline
+    git clone https://github.com/kaust-rccl/Dist-DL-training.git
+    ```
+## 4. Recommended Prior Sessions
+
+To get the most out of this workshop, it is **strongly recommended** that participants have:
+
+Completed the **KAUST Data Science Onboarding** session (or equivalent).
+
+Basic familiarity with:
+
+- Python programming
+
+- HPC environments (modules, Slurm jobs)
+
+- Version control with Git
+
+## 5. Pre-Workshop Verification (Sample Run)
+
+### Checklist (Complete Before Workshop)
 
 | Check                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                     | What to do                                                                               | Status |
 |-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|--------|
