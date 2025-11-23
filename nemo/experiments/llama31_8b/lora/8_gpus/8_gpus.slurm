@@ -15,7 +15,7 @@
 
 SCRIPT_PATH=$(scontrol show job "$SLURM_JOB_ID" | awk -F= '/Command=/{print $2}')
 SCRIPT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
-GPU_LOG_DIR="$SCRIPT_DIR/gp u_memory/$JOB_ID"
+GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/$JOB_ID"
 mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MODEL_DIR="$NEMO_ROOT_DIR/models/llama31_8b/model"
