@@ -30,16 +30,12 @@ Get the API Key from W&B Website
 3. Copy the key.
 
 ## 3.Add Your API Key to Your Environment
-#TODO : no bash rc
 
 Inside the cluster environment, export your key before starting training
-To make it persistent across sessions, add this line to your ~/.bashrc:
+To export it in all scripts at once run:
 ```commandline
-echo 'export WANDB_API_KEY="your-api-key-here"' >> ~/.bashrc
-```
-Then reload:
-```commandline
-source ~/.bashrc
+cd ../../fsdp
+wandb_api_key.sh <YOUR_WANDB_API_KEY>
 ```
 ## 4. Verify Your Authentication
 Run:
