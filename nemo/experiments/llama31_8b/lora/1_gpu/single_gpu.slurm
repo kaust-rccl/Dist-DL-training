@@ -19,7 +19,7 @@ GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/$JOB_ID"
 mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MODEL_DIR="$NEMO_ROOT_DIR/models/llama31_8b/model"
-CACHE_DIR=$NEMO_ROOT_DIR
+CACHE_DIR="$NEMO_ROOT_DIR/.cache"
 
 # ------------------------------
 # Exporting caching directories

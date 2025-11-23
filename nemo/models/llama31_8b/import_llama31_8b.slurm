@@ -14,7 +14,7 @@ SCRIPT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
 MODEL_DIR="$SCRIPT_DIR/model"
 mkdir -p "$MODEL_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
-CACHE_DIR=$NEMO_ROOT_DIR
+CACHE_DIR="$NEMO_ROOT_DIR/.cache"
 
 export TORCH_HOME="$CACHE_DIR/torch"
 export NEMO_DATASETS_CACHE="$CACHE_DIR/datasets"
