@@ -4,7 +4,8 @@ This key allows the training jobs to log metrics, loss curves, GPU usage, and ar
 
 Follow the steps below to create an account and obtain your API key.
 
-## 1. Create a Weights & Biases Account
+## 1. Create a Weights & Biases Account 
+#### (if you don't already have one)
 
    1. Open:
    https://wandb.ai/siteClick 

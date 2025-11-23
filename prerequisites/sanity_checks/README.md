@@ -15,7 +15,7 @@ These checks ensure that every participant can read required files, write to the
 ## What These Checks Validate
 ### File System Access
 
-- Ensures the participant can:
+Ensures the participant can:
 
 - Access their personal directory /ibex/user/$USER
 
@@ -25,7 +25,7 @@ These checks ensure that every participant can read required files, write to the
 
 ### GPU Node Access
 
-- Ensures the participant can:
+Ensures the participant can:
 
 - Allocate SLURM jobs on V100 and A100 partitions
 
