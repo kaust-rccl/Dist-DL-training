@@ -88,7 +88,7 @@ Submitted batch job xxxxxxxx
 For all GPU jobs, the real outputs are written to:
 
 ```commandline
-gpu_nodes/log/
+<submission_path>/log/
 ```
 
 Each job creates a log file such as:
