@@ -1,25 +1,77 @@
-# Parameter-Efficient Fine-Tuning with LoRA (Default PEFT Method in NeMo Factory)
+# Data Parallel Fine-Tuning with LoRA (Default PEFT Method in NeMo Factory)
 
-LoRA (Low-Rank Adaptation) is the **default parameter-efficient fine-tuning (PEFT)** technique used by the NVIDIA NeMo
-Factory recipes. Instead of updating all model weights—which is slow, memory-heavy, and expensive—LoRA injects a pair of
-small trainable matrices into targeted layers (usually attention and MLP projections).
+This workshop is primarily about **data-parallel training** of large language models: how training behaves as we scale
+from 1 GPU to multiple GPUs, and how to reason about time, memory, and scaling efficiency.
+
+However, to make this feasible on the available hardware, we use **LoRA (Low-Rank Adaptation)** as our
+parameter-efficient fine-tuning (PEFT) method.
+
+LoRA is the **default PEFT technique** used by the NVIDIA NeMo Factory recipes. Instead of updating all model
+weights—which is slow, memory-heavy, and expensive—LoRA injects a pair of small trainable matrices into targeted
+layers (usually attention and MLP projections).
 
 During training:
 
 - The original model weights are **kept frozen**.
-
 - Only the lightweight low-rank adaptation matrices (**A** and **B**) are trained.
-
 - The final effective weight is `W + ΔW`, where `ΔW = B·A` is the low-rank update.
 
-This approach drastically reduces memory usage and compute requirements, enabling fast and stable fine-tuning even on
-limited GPU resources.
+This drastically reduces the number of trainable parameters and the memory footprint, which has two important
+implications for this workshop:
 
-The reason for using PEFT in this workshop is the **size of the base model**.  
-A model like **LLaMA 3.1 8B cannot be fully fine-tuned on a single A100 80GB GPU** using standard data-parallel
-training—its full parameter gradients, optimizer states, and activations exceed available GPU memory.  
-LoRA avoids this limitation by training only a very small fraction of parameters, making it possible to fine-tune such a
-large model on a single A100.
+1. It allows us to **fit LLaMA 3.1 8B on a single A100 80GB GPU** for fine-tuning.  
+   A full-parameter fine-tune would require far more memory for gradients, optimizer states, and activations than a
+   single A100 can provide.
+
+2. It lets us still **study data-parallel scaling behavior** (1 → 2 → 4 → 8 GPUs) without changing the model or the
+   core training pipeline. We keep the model size fixed, apply LoRA on top, and then observe how runtime and memory
+   change as we increase the number of GPUs.
+
+In other words, LoRA is used here as an *enabler*: it makes large-model fine-tuning fit into the available GPUs, so we
+can focus the workshop on the data-parallel aspects—scaling, efficiency, and resource usage—rather than on fighting
+out-of-memory errors.
+
+---
+## Models Used in the Workshop
+
+For this workshop, we will practice data-parallel fine-tuning with **two example models**, each representing a different
+architectural family. This allows us to observe LoRA behavior and scaling characteristics across distinct transformer
+designs.
+
+
+#### **1. LLaMA 3.1 8B — Decoder-Only Transformer (Meta)**
+LLaMA belongs to the family of **decoder-only causal language models**.  
+Key characteristics:
+
+- Standard transformer decoder stack
+- Multi-head self-attention
+- MLP feed-forward blocks
+- Rotary positional embeddings (RoPE)
+- No encoder component
+- Optimized for next-token prediction
+
+This makes LLaMA ideal for demonstrating LoRA on a modern, efficient decoder-only architecture.
+
+---
+
+#### **2. Mixtral 8×7B — Sparse Mixture-of-Experts (Mistral AI)**
+Mixtral is a **Mixture-of-Experts (MoE) decoder-only transformer**, offering a very different architecture:
+
+- 8 experts per MoE layer
+- Router network dynamically selects 2 active experts per token
+- Significantly increased parameter count but lower active compute
+- Decoder-only design, like LLaMA
+- High throughput and efficiency due to sparse activation
+
+Mixtral allows us to observe how LoRA behaves on MoE models, especially how active parameters and memory usage differ
+from dense models like LLaMA.
+
+---
+
+By testing both **LLaMA (dense)** and **Mixtral (MoE)**, the workshop demonstrates LoRA fine-tuning across two major
+architecture types—providing a broader understanding of data-parallel scaling and memory behavior on modern large
+language models.
+
 
 ---
 
@@ -168,8 +220,15 @@ The script handles:
 5. Running NeMo Factory inside the container
 6. Logging timestamps and runtime
 
-Below is a high-level explanation of each part of the script, taking the [single_gpu.slurm](1_gpu/single_gpu.slurm) as a
+Below is a high-level explanation of each part of the script, taking the [single_gpu.slurm](llama31_8b/1_gpu/single_gpu.slurm) as a
 reference.
+
+The SLURM script used in this workshop is **nearly identical** for both LLaMA 3.1 8B and Mixtral 8×7B.  
+Both models are launched using the same NeMo Factory command structure, the same caching setup, and the same
+data-parallel configuration.
+
+The **only difference** is a single configuration override required by Mixtral because it is a **Mixture-of-Experts
+(MoE)** model.
 
 ---
 
@@ -280,7 +339,7 @@ batch size.
 
 To ensure consistent versions of CUDA, PyTorch, and NeMo, we run the CLI inside a container:
 
-```commandline
+```bash
 singularity exec --nv <nemo_image.sif> nemo llm finetune ...
 ```
 
@@ -288,7 +347,7 @@ Using `--nv` exposes the host GPUs to the container.
 
 In the SLURM script, this is wrapped with `srun` so it runs on the allocated GPU node:
 
-```commandline
+```bash
 srun singularity exec --nv /path/to/nemo_image.sif \
 nemo llm finetune --factory llama31_8b ...
 ```
@@ -298,7 +357,7 @@ nemo llm finetune --factory llama31_8b ...
 NeMo Factory recipes are defined as YAML configurations. Any value in the recipe can be overridden from the command line
 using dot notation:
 
-```commandline
+```bash
 trainer.max_steps=250 \
 data.global_batch_size=8 \
 optim.lr_scheduler.warmup_steps=50 \
@@ -306,8 +365,17 @@ optim.lr_scheduler.warmup_steps=50 \
 
 These overrides allow you to quickly modify the training behavior without editing any config files.
 
+#### Additional Parameter for Mixtral
+
+MoE models require an expert-parallel dimension, which is specified through:
+
+```bash
+trainer.strategy.expert_model_parallel_size=1
+```
+This means there is **no expert sharding**: each GPU holds the full set of experts, and it must be set, otherwise it fails.
+
 >In this workshop, these hyperparameters **are intentionally kept small** so that each run finishes quickly and participants can focus on understanding the workflow.
->However, for a model as large as **LLaMA 3.1 8B**, meaningful fine-tuning typically requires:
+>However, for models as large as **LLaMA 3.1 8B**, or **Mixtral 8x7B**, meaningful fine-tuning typically requires:
 >
 >- **much larger** batch sizes, and
 >
