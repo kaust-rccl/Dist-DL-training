@@ -347,10 +347,13 @@ This is the same pattern you would follow for N GPUs:
 
 Our workshop script does **not** hardcode the number of devices.
 Instead, it passes:
+
 ```bash
 trainer.devices="${SLURM_GPUS_PER_NODE}"
 ```
+
 This value is automatically populated by SLURM based on:
+
 ```bash
 #SBATCH --gpus-per-node=N
 ```
@@ -358,14 +361,132 @@ This value is automatically populated by SLURM based on:
 ### 3.Global Batch Size Behavior
 
 Because we use data parallelism, global batch size works like this:
+
 ```commandline
 per-GPU batch = global_batch_size / number_of_gpus
 ```
+
 So for:
+
 ```bash
 data.global_batch_size=8
 ```
+
 - 1 GPU → 8 per GPU
 - 2 GPUs → 4 per GPU
 - 4 GPUs → 2 per GPU
 
+## Try It Yourself: Run the Experiment and Collect Metrics
+
+In this part of the workshop, you will:
+
+1. Submit LoRA jobs with different numbers of GPUs (1, 2, 4, 8).
+2. Extract a few key metrics from the logs.
+3. Fill in a scaling table to see how performance and memory usage change.
+
+### 1. Submitting the Jobs
+
+From the [`lora/`](.) directory:
+
+#### 1 GPU (baseline)
+
+```commandline
+# 1 GPU (baseline)
+cd 1_gpu/
+sbatch single_gpu.slurm   # job-name: l-lo-1g
+```
+
+#### 2 GPUs
+
+``` commandline
+cd 2_gpus/
+sbatch 2_gpus.slurm   # job-name: l-lo-2g
+```
+
+#### 4 GPUs
+
+``` commandline
+cd 4_gpus/
+sbatch 4_gpus.slurm   # job-name: l-lo-4g
+```
+
+#### 8 GPUS
+
+``` commandline
+cd 8_gpus/
+sbatch 8_gpus.slurm   # job-name: l-lo-8g
+```
+
+Each script uses the same logic, only changing the SLURM GPU directives and the `job-name`.
+All SLURM logs are written under the submission directory in:
+
+```commandline
+logs/<job-name>-<job-id>.out
+```
+
+### 2. What to Extract from the Logs
+
+#### 2.1 Training Metrics (Final Iteration)
+
+Scroll to the last training line `(249/249)`, which looks like:
+
+```commandline
+Training epoch 0, iteration 249/249 | lr: 6.168e-09 | global_batch_size: 8 | global_step: 249 | reduced_train_loss: 0.1058 | train_step_timing in s: 1.608 | consumed_samples: 2000 | val_loss: 0.194
+```
+
+Extract:
+
+- `reduced_train_loss`
+- `train_step_timing` in s
+
+Use the **last** such line in the file.
+
+#### 2.2 Total Job Runtime
+
+Find the end-of-job block:
+
+```commandline
+===============================
+ Job finished
+ End time   : 2025-12-5 10:34:24
+ Total time : 00:09:55
+===============================
+```
+
+Extract:
+
+- `Total time`
+
+Convert this to seconds for scaling calculations.
+
+#### 2.3 GPU Memory (Peak, Avg, Mode)
+
+At the end of the memory analysis, locate lines such as:
+
+```commandline
+[gpu_memory_log - GPU 0] Peak = 16273 MiB, Avg = 1924.11 MiB, Mode = 1 MiB
+```
+
+Extract:
+
+- `Peak`
+- `Avg`
+- `Mode`
+
+Use **GPU 0** consistently for all runs.
+
+### 3. Scaling Table
+
+Fill in the table below using the extracted values.
+
+## Scaling Table
+
+Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
+Memory scaling = `peak_1gpu` / `peak_Ngpu`
+
+| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
+|------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
+| 1    | 8             |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
+| 2    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |
