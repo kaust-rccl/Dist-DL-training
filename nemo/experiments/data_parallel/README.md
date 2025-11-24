@@ -370,7 +370,7 @@ These overrides allow you to quickly modify the training behavior without editin
 MoE models require an expert-parallel dimension, which is specified through:
 
 ```bash
-trainer.strategy.expert_model_parallel_size=1
+trainer.strategy.expert_model_parallel_size=N
 ```
 This means there is **no expert sharding**: each GPU holds the full set of experts, and it must be set, otherwise it fails.
 
