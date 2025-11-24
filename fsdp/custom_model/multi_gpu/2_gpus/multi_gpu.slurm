@@ -20,13 +20,13 @@ conda activate ${CONDA_ENV}
 
 export CUDA_VISIBLE_DEVICES=0,1
 
-# Wandb offline logging
-export WANDB_MODE=offline
-export EXPERIMENT="${EXPERIMENT_NAME}"
+# Wandb online logging
+export WANDB_MODE=online
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
-export WANDB_RUN_ID=${EXPERIMENT_NAME}
-export WANDB_NAME=${EXPERIMENT_NAME}
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_API_KEY=${WANDB_API_KEY}
 
 # Distributed setup
@@ -42,7 +42,4 @@ srun --nodes=1 --ntasks=1 --gpus=2 \
        --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
        multi_gpu.py
 
-# Post-training: sync with Wandb
-wandb online
-cd ${WANDB_DIR}
-wandb sync --include-offline --sync-all
+

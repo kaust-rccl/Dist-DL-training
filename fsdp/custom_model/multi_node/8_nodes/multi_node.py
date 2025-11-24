@@ -343,6 +343,12 @@ def main():
 
     # FSDP configuration
     fsdp_cfg = {
+        "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
         "transformer_layer_cls_to_wrap": ["torch.nn.modules.transformer.TransformerEncoderLayer"],
         "backward_prefetch": "backward_post",
         "forward_prefetch": True,
