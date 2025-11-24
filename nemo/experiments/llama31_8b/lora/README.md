@@ -15,6 +15,12 @@ During training:
 This approach drastically reduces memory usage and compute requirements, enabling fast and stable fine-tuning even on
 limited GPU resources.
 
+The reason for using PEFT in this workshop is the **size of the base model**.  
+A model like **LLaMA 3.1 8B cannot be fully fine-tuned on a single A100 80GB GPU** using standard data-parallel
+training—its full parameter gradients, optimizer states, and activations exceed available GPU memory.  
+LoRA avoids this limitation by training only a very small fraction of parameters, making it possible to fine-tune such a
+large model on a single A100.
+
 ---
 
 ## Directory Overview
@@ -299,6 +305,15 @@ optim.lr_scheduler.warmup_steps=50 \
 ```
 
 These overrides allow you to quickly modify the training behavior without editing any config files.
+
+>In this workshop, these hyperparameters **are intentionally kept small** so that each run finishes quickly and participants can focus on understanding the workflow.
+>However, for a model as large as **LLaMA 3.1 8B**, meaningful fine-tuning typically requires:
+>
+>- **much larger** batch sizes, and
+>
+>- **significantly longer** training schedules
+>
+>In real training scenarios, these values would be scaled up to achieve stable optimization and observable model improvements.
 
 ---
 
