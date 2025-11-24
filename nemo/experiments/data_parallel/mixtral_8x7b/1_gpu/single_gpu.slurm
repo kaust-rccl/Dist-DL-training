@@ -20,6 +20,7 @@ mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MODEL_DIR="$NEMO_ROOT_DIR/models/mixtral_8x7b/model"
 CACHE_DIR="$NEMO_ROOT_DIR/.cache"
+mkdir -p "$CACHE_DIR"
 
 # ------------------------------
 # Exporting caching directories
