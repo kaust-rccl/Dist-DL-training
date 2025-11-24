@@ -15,7 +15,7 @@
 
 SCRIPT_PATH=$(scontrol show job "$SLURM_JOB_ID" | awk -F= '/Command=/{print $2}')
 SCRIPT_DIR="$( cd "$( dirname "$SCRIPT_PATH" )" && pwd )"
-GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/$JOB_ID"
+GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/${SLURM_JOB_ID}"
 mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MODEL_DIR="$NEMO_ROOT_DIR/models/llama31_8b/model"
@@ -42,9 +42,10 @@ module load singularity
 # ------------------------------
 # Monitoring GPU usage
 # ------------------------------
-nvidia-smi --query-gpu=timestamp,index,utilization.gpu,memory.used,memory.total \
-           --format=csv -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
+nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total \
+           --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
 GPU_MONITOR_PID=$!
+
 
 # ------------------------------
 # Log starting time
@@ -87,3 +88,5 @@ echo " End time   : $(date '+%Y-%m-%d %H:%M:%S')"
 echo " Total time : $(printf "%02d:%02d:%02d" $hours $mins $secs)"
 echo "==============================="
 
+echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
+python "$MEMORY_SCRIPT_DIR/analyze_memory.py" "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR" --gpu-only
