@@ -32,14 +32,15 @@ can focus the workshop on the data-parallel aspects—scaling, efficiency, and r
 out-of-memory errors.
 
 ---
+
 ## Models Used in the Workshop
 
 For this workshop, we will practice data-parallel fine-tuning with **two example models**, each representing a different
 architectural family. This allows us to observe LoRA behavior and scaling characteristics across distinct transformer
 designs.
 
-
 #### **1. LLaMA 3.1 8B — Decoder-Only Transformer (Meta)**
+
 LLaMA belongs to the family of **decoder-only causal language models**.  
 Key characteristics:
 
@@ -55,6 +56,7 @@ This makes LLaMA ideal for demonstrating LoRA on a modern, efficient decoder-onl
 ---
 
 #### **2. Mixtral 8×7B — Sparse Mixture-of-Experts (Mistral AI)**
+
 Mixtral is a **Mixture-of-Experts (MoE) decoder-only transformer**, offering a very different architecture:
 
 - 8 experts per MoE layer
@@ -220,7 +222,8 @@ The script handles:
 5. Running NeMo Factory inside the container
 6. Logging timestamps and runtime
 
-Below is a high-level explanation of each part of the script, taking the [single_gpu.slurm](llama31_8b/1_gpu/single_gpu.slurm) as a
+Below is a high-level explanation of each part of the script, taking
+the [single_gpu.slurm](llama31_8b/1_gpu/single_gpu.slurm) as a
 reference.
 
 The SLURM script used in this workshop is **nearly identical** for both LLaMA 3.1 8B and Mixtral 8×7B.  
@@ -372,16 +375,20 @@ MoE models require an expert-parallel dimension, which is specified through:
 ```bash
 trainer.strategy.expert_model_parallel_size=N
 ```
-This means there is **no expert sharding**: each GPU holds the full set of experts, and it must be set, otherwise it fails.
 
->In this workshop, these hyperparameters **are intentionally kept small** so that each run finishes quickly and participants can focus on understanding the workflow.
->However, for models as large as **LLaMA 3.1 8B**, or **Mixtral 8x7B**, meaningful fine-tuning typically requires:
+This means there is **no expert sharding**: each GPU holds the full set of experts, and it must be set, otherwise it
+fails.
+
+> In this workshop, these hyperparameters **are intentionally kept small** so that each run finishes quickly and
+> participants can focus on understanding the workflow.
+> However, for models as large as **LLaMA 3.1 8B**, or **Mixtral 8x7B**, meaningful fine-tuning typically requires:
 >
 >- **much larger** batch sizes, and
 >
 >- **significantly longer** training schedules
 >
->In real training scenarios, these values would be scaled up to achieve stable optimization and observable model improvements.
+>In real training scenarios, these values would be scaled up to achieve stable optimization and observable model
+> improvements.
 
 ---
 
@@ -484,21 +491,22 @@ Here’s a simplified example of what it looks like and what each section means:
 
 #### What Each Section Means (quick hints)
 
-- **data** → what dataset is used + batch sizes  
-- **model** → which LLM architecture is loaded (LLaMA / Mixtral)  
-- **peft** → whether LoRA is enabled and its rank/targets  
-- **optim** → optimizer type, learning rate, precision (bf16)  
-- **trainer** → number of GPUs, training length, logging frequency  
-- **strategy** → parallelism settings (TP/PP/EP)  
-- **resume** → path to the pretrained checkpoint  
-- **tokenizer** (if shown) → which tokenizer NeMo will use  
+- **data** → what dataset is used + batch sizes
+- **model** → which LLM architecture is loaded (LLaMA / Mixtral)
+- **peft** → whether LoRA is enabled and its rank/targets
+- **optim** → optimizer type, learning rate, precision (bf16)
+- **trainer** → number of GPUs, training length, logging frequency
+- **strategy** → parallelism settings (TP/PP/EP)
+- **resume** → path to the pretrained checkpoint
+- **tokenizer** (if shown) → which tokenizer NeMo will use
 
 This block is the fastest way to confirm:
-- the right model loaded  
-- LoRA is active  
-- GPU count is correct  
-- expert/tensor/pipeline parallel settings  
-- the dataset and batch sizes  
+
+- the right model loaded
+- LoRA is active
+- GPU count is correct
+- expert/tensor/pipeline parallel settings
+- the dataset and batch sizes
 
 If anything is misconfigured, the issue almost always shows up here.
 
@@ -517,6 +525,7 @@ All distributed processes registered. Starting with 2 processes
 [Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
 ...
 ```
+
 #### Quick Hints
 
 - **distributed_backend=nccl**  
@@ -535,9 +544,9 @@ All distributed processes registered. Starting with 2 processes
 
 You only need to worry if:
 
-- these messages hang and never progress  
-- “expected” vs “connected” counts don’t match  
-- logs stop here with a timeout or error  
+- these messages hang and never progress
+- “expected” vs “connected” counts don’t match
+- logs stop here with a timeout or error
 
 Otherwise, this simply confirms that multi-GPU communication is ready.
 
@@ -560,16 +569,19 @@ When LoRA is applied, you’ll see **two** model summaries: one **before** and o
 0         Modules in eval mode
 0         Total Flops
 ```
+
 Quick hints:
 
 - **Trainable params** = 24.2B
-All base model weights are still marked as trainable (LoRA not applied yet).
+  All base model weights are still marked as trainable (LoRA not applied yet).
 
 - **Total params** = 24.2B
-Parameter count of the full Mixtral model. 
+  Parameter count of the full Mixtral model.
 
 #### 2. LoRA being injected
+
 You then see a long list like:
+
 ```text
 [NeMo I ...] Adding lora to: module.decoder.layers.0.self_attention.linear_proj
 [NeMo I ...] Adding lora to: module.decoder.layers.0.self_attention.linear_qkv
@@ -577,13 +589,15 @@ You then see a long list like:
 [NeMo I ...] Adding lora to: module.decoder.layers.31.self_attention.linear_proj
 [NeMo I ...] Adding lora to: module.decoder.layers.31.self_attention.linear_qkv
 ```
+
 This means:
 
 - LoRA adapters are being attached to **QKV** and **projection** layers in every decoder block.
 
 - NeMo is wrapping those layers with small trainable low-rank matrices
-    
+
 #### 3. After applying LoRA (After applying model_transform)
+
 ```text
   | Name   | Type     | Params | Mode  | FLOPs
 ----------------------------------------------------
@@ -598,22 +612,23 @@ This means:
 0         Total Flops
 
 ```
+
 Quick hints:
 
 - **Trainable params = 18.9M**
 
-    Only the LoRA adapters are trainable.
-    The original 24.2B base parameters are now frozen.
+  Only the LoRA adapters are trainable.
+  The original 24.2B base parameters are now frozen.
 
 
 - **Non-trainable params = 24.2B**
 
-    The full base model is still there, but not updated during training.
+  The full base model is still there, but not updated during training.
 
 
 - **Modules in train mode increased (1065 → 1385)**
 
-    Extra modules come from the inserted LoRA layers.
+  Extra modules come from the inserted LoRA layers.
 
 This “before vs after” summary is the easiest way to verify that:
 
@@ -631,21 +646,23 @@ You may see lines like:
 [NeMo W ... rerun_state_machine:1263] Implicit initialization of Rerun State Machine!
 [NeMo W ... rerun_state_machine:239] RerunStateMachine initialized in mode RerunMode.DISABLED
 ```
+
 Quick hints:
 
 - `Received SIGTERM: 15`
 
-    SLURM sends SIGTERM to let the process know about potential requeue/cleanup.
-NeMo catches it so it _can_ support reruns or graceful shutdown.
+  SLURM sends SIGTERM to let the process know about potential requeue/cleanup.
+  NeMo catches it so it _can_ support reruns or graceful shutdown.
 
 
 - `RerunStateMachine initialized in mode RerunMode.DISABLED`
 
-    NeMo is setting up its internal “rerun” mechanism but it is disabled.
+  NeMo is setting up its internal “rerun” mechanism but it is disabled.
   This is just a warning-level log, not an error.
 
 For this workshop, you can safely **ignore** these messages.
-They do **not** indicate a problem with training, data, or parallelism—they’re just NeMo’s internal rerun logic being initialized and left turned off.
+They do **not** indicate a problem with training, data, or parallelism—they’re just NeMo’s internal rerun logic being
+initialized and left turned off.
 
 ### Training Step Logs
 
@@ -658,12 +675,11 @@ Training epoch 0, iteration 2/249 | lr: 5.882e-06 | global_batch_size: 8 | globa
 ...
 ```
 
-
 Quick hints for the fields:
 
 - **epoch / iteration**  
   Progress within the current epoch (we only run epoch 0 in this workshop).
-  
+
 - **lr**  
   The current learning rate after scheduler warmup.
 
@@ -687,7 +703,7 @@ Quick hints for the fields:
 NeMo prints these logs **in batches**, usually between validation intervals or after several training steps.  
 This means:
 
-- If your job seems to be “doing nothing” at first,  
+- If your job seems to be “doing nothing” at first,
 - it may simply be inside a training loop **before the first log flush**.
 
 This is normal.
@@ -703,41 +719,70 @@ As long as GPU utilization is high, the job is running correctly.
 
 In this part of the workshop, you will:
 
-1. Submit LoRA jobs with different numbers of GPUs (1, 2, 4, 8).
-2. Extract a few key metrics from the logs.
-3. Fill in a scaling table to see how performance and memory usage change.
+1. Run **LLaMA 3.1 8B + LoRA** with different numbers of GPUs (1, 2, 4, 8).
+2. Run **Mixtral 8×7B + LoRA** with different numbers of GPUs (2, 4, 8).
+3. Extract a few key metrics from the logs.
+4. Fill in scaling tables to see how performance and memory usage change for each model.
 
 ### 1. Submitting the Jobs
 
-From the [`data_parallel`](.) directory:
+#### 1.1 LLaMA 3.1 8B (LoRA, fits on 1 GPU)
 
-#### 1 GPU (baseline)
+From the [`data_parallel/llama31_8b/`](./llama31_8b) directory:
+
+##### 1 GPU (baseline)
 
 ```commandline
-# 1 GPU (baseline)
 cd 1_gpu/
 sbatch single_gpu.slurm   # job-name: l-lo-1g
 ```
 
-#### 2 GPUs
+##### 2 GPUs
 
-``` commandline
+```commandline
 cd 2_gpus/
 sbatch 2_gpus.slurm   # job-name: l-lo-2g
 ```
 
-#### 4 GPUs
+##### 4 GPUs
 
-``` commandline
+```commandline
 cd 4_gpus/
 sbatch 4_gpus.slurm   # job-name: l-lo-4g
 ```
 
-#### 8 GPUS
+##### 8 GPUs
 
-``` commandline
+```commandline
 cd 8_gpus/
 sbatch 8_gpus.slurm   # job-name: l-lo-8g
+```
+
+---
+
+#### 1.1 Mixtral 8×7B (LoRA + Expert Parallel, starts from 2 GPUs)
+
+From the [`data_parallel/mixtral_8x7b/`](./mixtral_8x7b) directory:
+
+##### 2 GPUs
+
+```commandline
+cd 2_gpus/
+sbatch 2_gpus.slurm   # job-name: m-lo-2g
+```
+
+##### 4 GPUs
+
+```commandline
+cd 4_gpus/
+sbatch 4_gpus.slurm   # job-name: m-lo-4g
+```
+
+##### 8 GPUs
+
+```commandline
+cd 8_gpus/
+sbatch 8_gpus.slurm   # job-name: m-lo-8g
 ```
 
 Each script uses the same logic, only changing the SLURM GPU directives and the `job-name`.
@@ -746,8 +791,17 @@ All SLURM logs are written under the submission directory in:
 ```commandline
 logs/<job-name>-<job-id>.out
 ```
-
-### 2. What to Extract from the Logs
+>**Important Note About Mixtral (MoE)**
+>
+>Mixtral 8×7B is a **Mixture-of-Experts model**, which internally contains **8 experts per MoE layer**.  
+>Even with LoRA enabled, **Mixtral does not fit into a single A100 80GB GPU** if all experts remain local to one device.
+>
+>To make Mixtral fit, we must enable **expert parallelism**, which splits the experts across the available GPUs:
+> ```commandline
+> trainer.strategy.expert_model_parallel_size = <number_of_gpus>
+>```
+> 
+### 2. What to Extract from the Logs (for both models)
 
 #### 2.1 Training Metrics (Final Iteration)
 
@@ -802,7 +856,7 @@ Use **GPU 0** consistently for all runs.
 
 Fill in the table below using the extracted values.
 
-## Scaling Table
+## 3.1 LLaMA 3.1 8B Scaling Table (LoRA, data parallel)
 
 Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
 Memory scaling = `peak_1gpu` / `peak_Ngpu`
@@ -811,5 +865,16 @@ Memory scaling = `peak_1gpu` / `peak_Ngpu`
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
 | 1    | 8             |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 2    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**
+
+## 3.2 Mixtral 8×7B Scaling Table (LoRA, data parallel + expert parallel)
+
+Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
+Memory scaling = `peak_1gpu` / `peak_Ngpu`
+
+| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
+|------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
+| 2    |               |                           |                     |                         |                  |                 |                  |                       | 1.0                          |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**
