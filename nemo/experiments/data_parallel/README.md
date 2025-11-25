@@ -459,6 +459,245 @@ data.global_batch_size=8
 - 2 GPUs → 4 per GPU
 - 4 GPUs → 2 per GPU
 
+## Understand the Output
+
+### “Resolved Arguments” Section
+
+When you launch a NeMo Factory command, the first thing it prints is a **dry run** showing the *fully resolved
+configuration* that NeMo will use for training. This is extremely useful because it reveals:
+
+Here’s a simplified example of what it looks like and what each section means:
+
+```commandline
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Argument Name    ┃ Resolved Value                                              ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+|data              │ SquadDataModule(seq_length=2048,                            |
+|                  |         micro_batch_size=1, global_batch_size=8)            |
+|model             │ MixtralModel(config=MixtralConfig8x7B())                    |
+|peft              │ LoRA(target_modules=['linear_qkv', 'linear_proj'], dim=32)  |
+|optim             │ Adam(lr=1e-4, weight_decay=0.1, bf16=True)                  |
+|trainer           │ Trainer(devices=2, max_steps=250)                           |
+|strateg           │ MegatronStrategy(tp=1, pp=1, ep=2, sequence_parallel=False) |
+|resume            │ path=/ibex/project/.../mixtral/model                        |
+```
+
+#### What Each Section Means (quick hints)
+
+- **data** → what dataset is used + batch sizes  
+- **model** → which LLM architecture is loaded (LLaMA / Mixtral)  
+- **peft** → whether LoRA is enabled and its rank/targets  
+- **optim** → optimizer type, learning rate, precision (bf16)  
+- **trainer** → number of GPUs, training length, logging frequency  
+- **strategy** → parallelism settings (TP/PP/EP)  
+- **resume** → path to the pretrained checkpoint  
+- **tokenizer** (if shown) → which tokenizer NeMo will use  
+
+This block is the fastest way to confirm:
+- the right model loaded  
+- LoRA is active  
+- GPU count is correct  
+- expert/tensor/pipeline parallel settings  
+- the dataset and batch sizes  
+
+If anything is misconfigured, the issue almost always shows up here.
+
+### Distributed Initialization Logs
+
+You’ll also see a short block confirming that distributed training has started correctly.  
+A typical snippet looks like:
+
+```text
+----------------------------------------------------------------------------------------------------
+distributed_backend=nccl
+All distributed processes registered. Starting with 2 processes
+----------------------------------------------------------------------------------------------------
+
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+...
+```
+#### Quick Hints
+
+- **distributed_backend=nccl**  
+  NeMo/Lightning will use **NCCL** for GPU-to-GPU communication (the standard backend on NVIDIA GPUs).
+
+- **Starting with 2 processes**  
+  Confirms the **world size = 2** → two ranks, typically one per GPU.
+
+- **[Gloo] Rank X is connected to Y peer ranks**  
+  Gloo is used for **control/coordination** (rendezvous, barriers, initialization).  
+  These messages show each rank verifying that it can see the expected peers.
+
+- **Expected number of connected peer ranks is : 1**  
+  With 2 processes, each rank should see **exactly 1 peer** (the other rank).  
+  Matching values indicate that distributed initialization succeeded.
+
+You only need to worry if:
+
+- these messages hang and never progress  
+- “expected” vs “connected” counts don’t match  
+- logs stop here with a timeout or error  
+
+Otherwise, this simply confirms that multi-GPU communication is ready.
+
+### LoRA in the Model Summary
+
+When LoRA is applied, you’ll see **two** model summaries: one **before** and one **after** the LoRA transform.
+
+#### 1. Before applying LoRA
+
+```text
+  | Name   | Type     | Params | Mode  | FLOPs
+----------------------------------------------------
+0 | module | GPTModel | 24.2 B | train | 0    
+----------------------------------------------------
+24.2 B    Trainable params
+0         Non-trainable params
+24.2 B    Total params
+96,616.858Total estimated model params size (MB)
+1065      Modules in train mode
+0         Modules in eval mode
+0         Total Flops
+```
+Quick hints:
+
+- **Trainable params** = 24.2B
+All base model weights are still marked as trainable (LoRA not applied yet).
+
+- **Total params** = 24.2B
+Parameter count of the full Mixtral model. 
+
+#### 2. LoRA being injected
+You then see a long list like:
+```text
+[NeMo I ...] Adding lora to: module.decoder.layers.0.self_attention.linear_proj
+[NeMo I ...] Adding lora to: module.decoder.layers.0.self_attention.linear_qkv
+...
+[NeMo I ...] Adding lora to: module.decoder.layers.31.self_attention.linear_proj
+[NeMo I ...] Adding lora to: module.decoder.layers.31.self_attention.linear_qkv
+```
+This means:
+
+- LoRA adapters are being attached to **QKV** and **projection** layers in every decoder block.
+
+- NeMo is wrapping those layers with small trainable low-rank matrices
+    
+#### 3. After applying LoRA (After applying model_transform)
+```text
+  | Name   | Type     | Params | Mode  | FLOPs
+----------------------------------------------------
+0 | module | GPTModel | 24.2 B | train | 0    
+----------------------------------------------------
+18.9 M    Trainable params
+24.2 B    Non-trainable params
+24.2 B    Total params
+96,692.355Total estimated model params size (MB)
+1385      Modules in train mode
+0         Modules in eval mode
+0         Total Flops
+
+```
+Quick hints:
+
+- **Trainable params = 18.9M**
+
+    Only the LoRA adapters are trainable.
+    The original 24.2B base parameters are now frozen.
+
+
+- **Non-trainable params = 24.2B**
+
+    The full base model is still there, but not updated during training.
+
+
+- **Modules in train mode increased (1065 → 1385)**
+
+    Extra modules come from the inserted LoRA layers.
+
+This “before vs after” summary is the easiest way to verify that:
+
+- LoRA was actually injected, and
+
+- you are doing **parameter-efficient fine-tuning** instead of full 24B-parameter training.
+
+### Rerun / SIGTERM Messages
+
+You may see lines like:
+
+```text
+[rank: 0] Received SIGTERM: 15
+[rank: 0] Received SIGTERM: 15
+[NeMo W ... rerun_state_machine:1263] Implicit initialization of Rerun State Machine!
+[NeMo W ... rerun_state_machine:239] RerunStateMachine initialized in mode RerunMode.DISABLED
+```
+Quick hints:
+
+- `Received SIGTERM: 15`
+
+    SLURM sends SIGTERM to let the process know about potential requeue/cleanup.
+NeMo catches it so it _can_ support reruns or graceful shutdown.
+
+
+- `RerunStateMachine initialized in mode RerunMode.DISABLED`
+
+    NeMo is setting up its internal “rerun” mechanism but it is disabled.
+  This is just a warning-level log, not an error.
+
+For this workshop, you can safely **ignore** these messages.
+They do **not** indicate a problem with training, data, or parallelism—they’re just NeMo’s internal rerun logic being initialized and left turned off.
+
+### Training Step Logs
+
+During training, NeMo prints a line for each optimization step, for example:
+
+```text
+Training epoch 0, iteration 0/249 | lr: 1.961e-06 | global_batch_size: 8 | global_step: 0 | reduced_train_loss: 1.315 | train_step_timing in s: 7.126
+Training epoch 0, iteration 1/249 | lr: 3.922e-06 | global_batch_size: 8 | global_step: 1 | reduced_train_loss: 1.653 | train_step_timing in s: 2.505 | consumed_samples: 16
+Training epoch 0, iteration 2/249 | lr: 5.882e-06 | global_batch_size: 8 | global_step: 2 | reduced_train_loss: 1.278 | train_step_timing in s: 1.505 | consumed_samples: 24
+...
+```
+
+
+Quick hints for the fields:
+
+- **epoch / iteration**  
+  Progress within the current epoch (we only run epoch 0 in this workshop).
+  
+- **lr**  
+  The current learning rate after scheduler warmup.
+
+- **global_batch_size**  
+  Total batch size across all GPUs.
+
+- **global_step**  
+  The training step counter (0 → 249 in this run).
+
+- **reduced_train_loss**  
+  Loss averaged across GPUs.
+
+- **train_step_timing**  
+  Time (in seconds) to complete the step.
+
+- **consumed_samples**  
+  How many samples have been processed so far.
+
+### Why training may appear to “stall” before logs appear
+
+NeMo prints these logs **in batches**, usually between validation intervals or after several training steps.  
+This means:
+
+- If your job seems to be “doing nothing” at first,  
+- it may simply be inside a training loop **before the first log flush**.
+
+This is normal.
+
+**No logs ≠ no training.**  
+Especially on the first few steps (step 0 can take ~5–10 seconds), output may take a while to appear.
+
+As long as GPU utilization is high, the job is running correctly.
+
+---
 ## Try It Yourself: Run the Experiment and Collect Metrics
 
 In this part of the workshop, you will:
