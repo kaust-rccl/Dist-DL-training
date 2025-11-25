@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=F-C-1G1N
-#SBATCH --output=logs/single_custom_%j.out
-#SBATCH --error=logs/single_custom_%j.err 
+#SBATCH --output=logs/%x-%j.out
 #SBATCH --gpus=1
 #SBATCH --gpus-per-node=1
 #SBATCH --ntasks=1

@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=F-C-8G4N
-#SBATCH --output=logs/multi_node_custom_4_%j.out                   # Stdout file
-#SBATCH --error=logs/multi_node_custom_4_%j.err                    # Stderr file
+#SBATCH --output=logs/%x-%j.out
 #SBATCH --gpus=8
 #SBATCH --gpus-per-node=2
 #SBATCH --ntasks=4

@@ -190,18 +190,22 @@ After the run finishes, you'll find:
 
 FSDP experiments follow the naming pattern:
 
-**`f-xGxN`**
+**`F-B/C-xGxN`**
 
 Where:
 
-- **f** → Fully Sharded Data Parallel (PyTorch FSDP)
+- **F** → Fully Sharded Data Parallel (PyTorch FSDP)
+
+- **B/C** → B for Bloom, or C for custom-model
+  - A **W** added to the C for custom model indicates weak scaling. 
+
 - **xG** → Number of GPUs in total  
 - **xN** → Number of nodes
 
 **Example:**  
-`f-1G1N` → FSDP on **1 GPU** on **1 node**  
-`f-4G1N` → FSDP using **4 GPUs** on **1 node**  
-`f-4G2N` → FSDP across **2 nodes**, each with 2 GPUs, so **4 GPUs in total**.
+`F-B-1G1N` → FSDP, for fine-tuning Bloom, on **1 GPU** on **1 node**  
+`F-C-4G1N` → FSDP, for custom model fine-tuning, using **4 GPUs** on **1 node**  
+`F-CW-4G2N` → FSDP, for weak-scaling custom model fine-tuning, across **2 nodes**, each with 2 GPUs, so **4 GPUs in total**.
 
 ##  Exercise: Run the Baseline Training & Fill Evaluation Summary Table
 

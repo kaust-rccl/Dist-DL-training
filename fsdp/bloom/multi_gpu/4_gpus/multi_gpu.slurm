@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=F-B-4G1N
-#SBATCH --output=logs/multi_gpu_4_%j.out
-#SBATCH --error=logs/multi_gpu_4_%j.err            
+#SBATCH --output=logs/%x-%j.out
 #SBATCH --gpus=4
 #SBATCH --gpus-per-node=4
 #SBATCH --ntasks=1

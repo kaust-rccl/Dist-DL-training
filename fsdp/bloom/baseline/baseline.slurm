@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=F-B-1G1N     	          	    # Job name
-#SBATCH --error=logs/single_node_%j.err     	    # Standard error
-#SBATCH --output=logs/single_node_%j.out    	    # Standard output
+#SBATCH --output=logs/%x-%j.out             	    # Standard output
 #SBATCH --ntasks=1   		                          # Total MPI tasks
 #SBATCH --tasks-per-node=1      	                # MPI tasks per node
 #SBATCH --gpus=1                            	    # Total GPUs per node

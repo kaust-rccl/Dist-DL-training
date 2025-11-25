@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=F-C-4G1N
-#SBATCH --output=logs/custom_multi_gpu_4_%j.out
-#SBATCH --error=logs/custom_multi_gpu_4_%j.err
+#SBATCH --output=logs/%x-%j.out
 #SBATCH --ntasks=1		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
 #SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus=4                                   # Total GPUs
