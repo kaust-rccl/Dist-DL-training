@@ -186,6 +186,23 @@ After the run finishes, you'll find:
 
 - SLURM log files in the `log` directory or as specified by --output
 
+### Job Naming Convention
+
+FSDP experiments follow the naming pattern:
+
+**`f-xGxN`**
+
+Where:
+
+- **f** → Fully Sharded Data Parallel (PyTorch FSDP)
+- **xG** → Number of GPUs in total  
+- **xN** → Number of nodes
+
+**Example:**  
+`f-1G1N` → FSDP on **1 GPU** on **1 node**  
+`f-4G1N` → FSDP using **4 GPUs** on **1 node**  
+`f-4G2N` → FSDP across **2 nodes**, each with 2 GPUs, so **4 GPUs in total**.
+
 ##  Exercise: Run the Baseline Training & Fill Evaluation Summary Table
 
 As part of this workshop, your task is to **run the baseline fine-tuning experiment** and **recreate the performance summary table** using your own training logs.

@@ -6,7 +6,7 @@
 #SBATCH --tasks-per-node=1      	                # MPI tasks per node
 #SBATCH --gpus=1                            	    # Total GPUs per node
 #SBATCH --gpus-per-node=1                   	    # GPUs allocated per node
-#SBATCH --constraint=v100			                    # e.g. v100
+#SBATCH --constraint=v100			                    # Request specific GPU type (V100)
 #SBATCH --cpus-per-task=4		                      # CPU cores per task
 #SBATCH --time=00:30:00                        	  # HH:MM:SS
 #SBATCH --mem=64G		                              # Total memory per node

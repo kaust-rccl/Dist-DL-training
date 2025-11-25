@@ -284,6 +284,22 @@ After your SLURM job completes, the following artifacts will be generated:
 | **GPU Memory Log**   | `gpu_memory/gpu_memory_log_<job_id>.csv` | Periodic memory usage from `nvidia-smi`                        |
 | **CPU Memory Log**   | `cpu_memory/cpu_memory_log_<job_id>.txt` | RAM usage sampled over time using `psrecord`                   |
 
+#### Job Naming Convention
+
+All ZeRO experiments follow the naming pattern:
+
+**`xZ-xGxN`**
+
+Where:
+
+- **xZ** → DeepSpeed ZeRO Stage (1Z = ZeRO-1, 2Z = ZeRO-2, 3Z = ZeRO-3)
+- **xG** → Number of total GPUs   
+- **xN** → Number of nodes used in the job
+
+**Example:**  
+`1Z-1G1N` → ZeRO-1 using **1 GPU** on **1 node**  
+`2Z-4G2N` → ZeRO-2 using **4 GPUs total** so, **2 GPUs per node**  
+`3Z-8G4N` → ZeRO-3 using **8 GPUs total** so, **2 GPUs per node**
 ---
 
 ## Exercise: Run the Baseline Training & Fill Evaluation Summary Table
