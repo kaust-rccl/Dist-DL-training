@@ -698,7 +698,8 @@ Especially on the first few steps (step 0 can take ~5–10 seconds), output may 
 As long as GPU utilization is high, the job is running correctly.
 
 ---
-## Try It Yourself: Run the Experiment and Collect Metrics
+
+**_## Try It Yourself: Run the Experiment and Collect Metrics
 
 In this part of the workshop, you will:
 
@@ -708,7 +709,7 @@ In this part of the workshop, you will:
 
 ### 1. Submitting the Jobs
 
-From the [`lora/`](.) directory:
+From the [`data_parallel`](.) directory:
 
 #### 1 GPU (baseline)
 
@@ -811,4 +812,4 @@ Memory scaling = `peak_1gpu` / `peak_Ngpu`
 | 1    | 8             |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 2    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
-| 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**

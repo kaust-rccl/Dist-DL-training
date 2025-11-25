@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=m-lo-2g
+#SBATCH --job-name=m-lo-4g
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
-#SBATCH --gpus-per-node=2
+#SBATCH --ntasks-per-node=4
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
 #SBATCH --constraint=a100

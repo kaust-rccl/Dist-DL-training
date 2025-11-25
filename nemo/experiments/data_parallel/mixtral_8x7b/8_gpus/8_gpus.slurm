@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=m-lo-1g
+#SBATCH --job-name=m-lo-8g
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=1
+#SBATCH --ntasks-per-node=8
+#SBATCH --gpus-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
 #SBATCH --constraint=a100
@@ -67,7 +67,7 @@ srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
 nemo llm finetune \
 --factory mixtral_8x7b --yes \
 trainer.devices="${SLURM_GPUS_PER_NODE}" \
-trainer.strategy.expert_model_parallel_size=1 \
+trainer.strategy.expert_model_parallel_size="${SLURM_GPUS_PER_NODE}"  \
 trainer.max_steps=250 \
 trainer.limit_val_batches=10 \
 optim.lr_scheduler.warmup_steps=50 \
