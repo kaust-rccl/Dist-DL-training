@@ -51,8 +51,6 @@ GPU_LOG_PID=$!
 export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)  # Hostname or IP of the master node for NCCL initialization
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 29500)
 export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
-export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
-export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
 
 # ------------------------------
 # Launch Training

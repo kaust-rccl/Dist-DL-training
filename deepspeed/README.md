@@ -733,8 +733,6 @@ the [SLURM](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm) scrip
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')    # Dynamically find a free TCP port on the current node to use as the rendezvous port.
 export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
-export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
-export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
 ```
 
 These environment variables configure distributed training manually.
