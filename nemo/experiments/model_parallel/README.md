@@ -1,79 +1,106 @@
-# Data Parallel Fine-Tuning with LoRA (Default PEFT Method in NeMo Factory)
+# Model Parallel Fine-Tuning (No LoRA / No PEFT)
 
-This workshop is primarily about **data-parallel training** of large language models: how training behaves as we scale
-from 1 GPU to multiple GPUs, and how to reason about time, memory, and scaling efficiency.
+While the [Data Parallel](../data_parallel/README.md) section focused on **data-parallel training with LoRA**, this part
+of the workshop shifts to a
+different goal:
 
-However, to make this feasible on the available hardware, we use **LoRA (Low-Rank Adaptation)** as our
-parameter-efficient fine-tuning (PEFT) method.
+**Understanding how very large models are trained *without* PEFT — by splitting the model across multiple GPUs.**
 
-LoRA is the **default PEFT technique** used by the NVIDIA NeMo Factory recipes. Instead of updating all model
-weights—which is slow, memory-heavy, and expensive—LoRA injects a pair of small trainable matrices into targeted
-layers (usually attention and MLP projections).
+For this section, **LoRA is intentionally disabled**.  
+We want to demonstrate how large models (dense or MoE) can be trained using:
 
-During training:
+- **Tensor Model Parallelism (TP)**
+- **Expert Parallelism (EP)** for Mixture-of-Experts models
+- **Sequence Parallelism**
 
-- The original model weights are **kept frozen**.
-- Only the lightweight low-rank adaptation matrices (**A** and **B**) are trained.
-- The final effective weight is `W + ΔW`, where `ΔW = B·A` is the low-rank update.
+These techniques divide the *model weights themselves* across multiple GPUs, allowing models that do *not* fit on a
+single device to be trained.
 
-This drastically reduces the number of trainable parameters and the memory footprint, which has two important
-implications for this workshop:
+This is in contrast to LoRA:
 
-1. It allows us to **fit LLaMA 3.1 8B on a single A100 80GB GPU** for fine-tuning.  
-   A full-parameter fine-tune would require far more memory for gradients, optimizer states, and activations than a
-   single A100 can provide.
+- LoRA reduces *trainable parameters* and *memory*, enabling single-GPU fine-tuning.
+- Model parallelism reduces the **model's memory footprint by distributing its layers**, enabling multi-GPU training.
 
-2. It lets us still **study data-parallel scaling behavior** (1 → 2 → 4 → 8 GPUs) without changing the model or the
-   core training pipeline. We keep the model size fixed, apply LoRA on top, and then observe how runtime and memory
-   change as we increase the number of GPUs.
+Here, PEFT would “hide” the real behavior of model parallelism, so we disable it:
 
-In other words, LoRA is used here as an *enabler*: it makes large-model fine-tuning fit into the available GPUs, so we
-can focus the workshop on the data-parallel aspects—scaling, efficiency, and resource usage—rather than on fighting
-out-of-memory errors.
+```bash
+peft=none 
+```
+
+This section is therefore about **true large-model training**, not parameter-efficient approximations.
 
 ---
 
-## Models Used in the Workshop
+## Models Used in This Section
 
 For this workshop, we will practice data-parallel fine-tuning with **two example models**, each representing a different
 architectural family. This allows us to observe LoRA behavior and scaling characteristics across distinct transformer
 designs.
 
-#### **1. LLaMA 3.1 8B — Decoder-Only Transformer (Meta)**
+### 1. **LLaMA 3.1 8B — Dense Decoder-Only Transformer**
 
-LLaMA belongs to the family of **decoder-only causal language models**.  
-Key characteristics:
+LLaMA is a **dense** model:
 
-- Standard transformer decoder stack
-- Multi-head self-attention
-- MLP feed-forward blocks
-- Rotary positional embeddings (RoPE)
-- No encoder component
-- Optimized for next-token prediction
+- 8 billion parameters
+- standard decoder-only stack (attention + MLP)
+- no mixture-of-experts layers
+- full model must be loaded during training
 
-This makes LLaMA ideal for demonstrating LoRA on a modern, efficient decoder-only architecture.
+Without LoRA, **LLaMA 8B does NOT fit on a single A100 80GB GPU** (gradients + optimizer states exceed memory), so we
+use:
+
+- **Tensor Model Parallelism (TP)**  
+  Splits large weight matrices across GPUs.
+
+This allows LLaMA 8B to be trained on 2× A100 GPUs.
+
+LLaMA is our example of **dense model parallelism**.
 
 ---
 
-#### **2. Mixtral 8×7B — Sparse Mixture-of-Experts (Mistral AI)**
+### 2. **Mixtral 8×7B — Sparse Mixture-of-Experts Transformer**
 
-Mixtral is a **Mixture-of-Experts (MoE) decoder-only transformer**, offering a very different architecture:
+Mixtral uses **Mixture-of-Experts (MoE)** layers:
 
 - 8 experts per MoE layer
-- Router network dynamically selects 2 active experts per token
-- Significantly increased parameter count but lower active compute
-- Decoder-only design, like LLaMA
-- High throughput and efficiency due to sparse activation
+- only 2 experts active per token
+- total parameters ~24B
+- far too large for a single GPU
 
-Mixtral allows us to observe how LoRA behaves on MoE models, especially how active parameters and memory usage differ
-from dense models like LLaMA.
+Even with LoRA disabled, model parallelism makes Mixtral trainable via:
+
+- **Expert Parallelism (EP)**  
+  Shards the experts across GPUs (required to fit into memory).
+
+To run Mixtral:
+
+- **EP ≥ 2 is required** — it cannot fit on 1 GPU.
+
+Mixtral is our example of **sparse model parallelism**.
 
 ---
 
-By testing both **LLaMA (dense)** and **Mixtral (MoE)**, the workshop demonstrates LoRA fine-tuning across two major
-architecture types—providing a broader understanding of data-parallel scaling and memory behavior on modern large
-language models.
+## Why Disable LoRA Here?
 
+To showcase the **actual mechanisms** used to train massive models:
+
+- Tensor Parallelism  
+  (splitting linear layers across GPUs)
+
+- Expert Parallelism  
+  (splitting MoE experts across GPUs)
+
+- Sequence Parallelism  
+  (splitting activations)
+
+With LoRA, models fit easily and parallelism becomes unnecessary.  
+By disabling LoRA:
+
+- LLaMA 8B forces us to use **TP**
+- Mixtral 8×7B forces us to use **EP**
+- We see real **memory footprint reduction**, GPU communication, and scaling behavior
+
+This provides a clear, hands-on understanding of the *true* model-parallel strategies used for very large LLMs.
 
 ---
 
@@ -209,50 +236,95 @@ All experiments in this workshop must be submitted to A100 nodes.
 
 ## Understanding the SLURM Script for This Workshop
 
-With the environment prepared and the GPU requirements clarified, we can now look at the SLURM script used in this
-workshop to run NeMo Factory LoRA fine-tuning. This script is designed to be simple, reproducible, and optimized for
-A100 nodes on Ibex.
+Before diving into model–parallel experiments, it is important to understand how the SLURM script is structured and why
+we need **multiple GPUs** for every run in this section.
 
-The script handles:
+Because **LoRA is disabled**, the full model weights, gradients, optimizer states, and activations must fit into GPU
+memory. None of the models we use in this section can run on **a single A100 80GB GPU** without PEFT.
 
-1. Requesting the correct resources from SLURM
-2. Preparing cache and model directories
-3. Loading CUDA and Singularity
-4. Monitoring GPU usage
-5. Running NeMo Factory inside the container
-6. Logging timestamps and runtime
+Therefore:
 
-Below is a high-level explanation of each part of the script, taking
-the [single_gpu.slurm](llama31_8b/1_gpu/single_gpu.slurm) as a
-reference.
+> **All experiments in this section start from multiple GPUs.  
+> There is no single-GPU run.**
 
-The SLURM script used in this workshop is **nearly identical** for both LLaMA 3.1 8B and Mixtral 8×7B.  
-Both models are launched using the same NeMo Factory command structure, the same caching setup, and the same
-data-parallel configuration.
+The exact number of GPUs required depends on **how many dimensions of model parallelism are enabled**.
 
-The **only difference** is a single configuration override required by Mixtral because it is a **Mixture-of-Experts
-(MoE)** model.
+---
+
+### Model Parallelism and GPU Count
+
+Modern large models may use one or more of the following parallelism dimensions:
+
+- **Tensor Model Parallelism (TP)**  
+  Splits large weight matrices across GPUs.
+
+- **Expert Parallelism (EP)** (for Mixture-of-Experts models)  
+  Splits groups of experts across GPUs.
+
+- **Pipeline Parallelism (PP)** (not used in this workshop)  
+  Splits layers across GPUs.
+
+If multiple parallel dimensions are used simultaneously, the **total number of GPUs required** is:
+
+```text
+total_gpus = TP × EP × PP
+```
+
+For this workshop, PP = 1, so:
+
+```text
+total_gpus = TP × EP
+```
+
+Examples:
+
+- If **TP = 2** and **EP = 1**, you need **2 GPUs**
+- If **TP = 1** and **EP = 4**, you need **4 GPUs**
+- If **TP = 2** and **EP = 2**, you need **4 GPUs**
+- If **TP = 4** and **EP = 2**, you need **8 GPUs**
+
+This is why we cannot hard-code a “2-GPU version” or “4-GPU version” for all models.  
+Different architectures require different combinations of TP and EP to fit into memory.
+
+---
+
+## How the SLURM Script Fits Into This
+
+Regardless of the parallelism scheme, the SLURM script always does the same foundational steps:
+
+1. **Requests the number of GPUs needed**  
+   (matching `total_gpus = TP × EP`)
+
+2. **Sets up cache directories**  
+   so that everything stays inside the experiment folder.
+
+3. **Loads CUDA and Singularity modules**
+
+4. **Starts background GPU monitoring**
+
+5. **Runs NeMo Factory inside a container**  
+   using the GPUs allocated by SLURM
 
 ---
 
 ### 1. Resource Requests
 
-At the top of the script, the `#SBATCH` directives request the hardware and runtime needed for the experiment:
+The top of the script declares the number of GPUs you want SLURM to allocate:
 
 ```bash
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=1
+#SBATCH --ntasks-per-node=<total_gpus>
+#SBATCH --gpus-per-node=<total_gpus>
 #SBATCH --cpus-per-task=4
 #SBATCH --constraint=a100
-#SBATCH --time=01:00:00
+#SBATCH --time=08:00:00
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
 ```
 
-This ensures the job runs on a single A100 GPU with enough memory and CPU resources for NeMo and the container.
+> Whatever TP and EP you configure in NeMo, the SLURM GPU count must match
+> total_gpus = TP × EP
 
----
 
 ### 2. Directory Resolution
 
@@ -308,7 +380,6 @@ nvidia-smi --query-gpu=timestamp,index,utilization.gpu,memory.used,memory.total
 This collects usage data every 5 seconds for later inspection.
 
 ---
-
 ### 6. Running NeMo Factory
 
 NeMo Factory provides a command-line interface for running standardized fine-tuning workflows using predefined “factory”
@@ -317,7 +388,7 @@ recipes. In this workshop, we use it to fine-tune the LLaMA 3.1 8B model with Lo
 NeMo Factory is always launched through the `nemo` CLI inside a Singularity container to ensure a consistent,
 reproducible environment across all participants.
 
-### The NeMo Factory CLI
+#### The NeMo Factory CLI
 
 The basic structure of a fine-tuning command is:
 
@@ -338,7 +409,7 @@ This loads all the default settings for training LLaMA 3.1 8B with LoRA.
 You can then override any configuration parameter directly on the command line, such as the number of training steps or
 batch size.
 
-### Running NeMo inside a Singularity container
+#### Running NeMo inside a Singularity container
 
 To ensure consistent versions of CUDA, PyTorch, and NeMo, we run the CLI inside a container:
 
@@ -355,10 +426,11 @@ srun singularity exec --nv /path/to/nemo_image.sif \
 nemo llm finetune --factory llama31_8b ...
 ```
 
-### YAML overrides
+#### YAML overrides
 
 NeMo Factory recipes are defined as YAML configurations. Any value in the recipe can be overridden from the command line
 using dot notation:
+
 
 ```bash
 trainer.max_steps=250 \
@@ -368,13 +440,29 @@ optim.lr_scheduler.warmup_steps=50 \
 
 These overrides allow you to quickly modify the training behavior without editing any config files.
 
+**Parallelism Overrides**
+
+The model-parallel configuration is passed via YAML overrides, typically:
+```commandline
+trainer.strategy.tensor_model_parallel_size=<TP>
+```
+
 #### Additional Parameter for Mixtral
 
 MoE models require an expert-parallel dimension, which is specified through:
 
 ```bash
-trainer.strategy.expert_model_parallel_size=N
+trainer.strategy.tensor_model_parallel_size=<TP>
+trainer.strategy.expert_model_parallel_size=<EP>
+trainer.strategy.sequence_parallel=True \
 ```
+Whatever values you assign:
+
+- SLURM must allocate `TP × EP` GPUs
+
+- NeMo Lightning will launch that many distributed processes
+
+- Each process corresponds to one GPU
 
 > In this workshop, these hyperparameters **are intentionally kept small** so that each run finishes quickly and
 > participants can focus on understanding the workflow.
@@ -388,80 +476,6 @@ trainer.strategy.expert_model_parallel_size=N
 > improvements.
 
 ---
-
-## Scaling Up: Data Parallel Training with Multiple GPUs
-
-So far, the script runs LoRA fine-tuning on **a single A100 GPU**.  
-To speed things up, we can use **data parallelism** by adding more devices.
-
-In data parallel training:
-
-- Each GPU gets a **copy of the model**.
-- The **global batch** is split across GPUs.
-- Gradients are synchronized between GPUs at each step.
-
-NeMo (via Lightning) handles this automatically once we increase the number of devices.
-
----
-
-### 1. Adjust SLURM Resources
-
-For example, to use **2 GPUs on a single node**:
-
-```bash
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
-#SBATCH --gpus-per-node=2
-#SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
-```
-
-Key points:
-
-- `--gpus-per-node=2` → request 2 GPUs on the node.
-- `--ntasks-per-node=2` → Lightning expects one task per GPU.
-- Still constrained to A100 nodes.
-
-This is the same pattern you would follow for N GPUs:
-
-```bash
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=N
-#SBATCH --gpus-per-node=N
-```
-
-### 2. The Script Automatically Adapts to GPU Count
-
-Our workshop script does **not** hardcode the number of devices.
-Instead, it passes:
-
-```bash
-trainer.devices="${SLURM_GPUS_PER_NODE}"
-```
-
-This value is automatically populated by SLURM based on:
-
-```bash
-#SBATCH --gpus-per-node=N
-```
-
-### 3.Global Batch Size Behavior
-
-Because we use data parallelism, global batch size works like this:
-
-```commandline
-per-GPU batch = global_batch_size / number_of_gpus
-```
-
-So for:
-
-```bash
-data.global_batch_size=8
-```
-
-- 1 GPU → 8 per GPU
-- 2 GPUs → 4 per GPU
-- 4 GPUs → 2 per GPU
 
 ## Understand the Output
 
@@ -723,50 +737,36 @@ In this part of the workshop, you will:
 
 ### 1. Submitting the Jobs
 
-#### 1.1 LLaMA 3.1 8B (LoRA, fits on 1 GPU)
+#### 1.1 LLaMA 3.1 8B 
 
-From the [`data_parallel/llama31_8b/`](./llama31_8b) directory:
-
-##### 1 GPU (baseline)
-
-```commandline
-cd 1_gpu/
-sbatch single_gpu.slurm   # job-name: l-lo-1g
-```
+From the [`model_parallel/llama31_8b/`](./llama31_8b) directory:
 
 ##### 2 GPUs
 
 ```commandline
 cd 2_gpus/
-sbatch 2_gpus.slurm   # job-name: l-lo-2g
+sbatch 2_gpus.slurm   # job-name: l-mp-2g
 ```
 
 ##### 4 GPUs
 
 ```commandline
 cd 4_gpus/
-sbatch 4_gpus.slurm   # job-name: l-lo-4g
+sbatch 4_gpus.slurm   # job-name: l-mp-4g
 ```
 
 ##### 8 GPUs
 
 ```commandline
 cd 8_gpus/
-sbatch 8_gpus.slurm   # job-name: l-lo-8g
+sbatch 8_gpus.slurm   # job-name: l-mp-8g
 ```
 
 ---
 
 #### 1.2 Mixtral 8×7B (LoRA + Expert Parallel, starts from 2 GPUs)
 
-From the [`data_parallel/mixtral_8x7b/`](./mixtral_8x7b) directory:
-
-##### 2 GPUs
-
-```commandline
-cd 2_gpus/
-sbatch 2_gpus.slurm   # job-name: m-lo-2g
-```
+From the [`model_parallel/mixtral_8x7b/`](./mixtral_8x7b) directory:
 
 ##### 4 GPUs
 
@@ -788,16 +788,8 @@ All SLURM logs are written under the submission directory in:
 ```commandline
 logs/<job-name>-<job-id>.out
 ```
->**Important Note About Mixtral (MoE)**
->
->Mixtral 8×7B is a **Mixture-of-Experts model**, which internally contains **8 experts per MoE layer**.  
->Even with LoRA enabled, **Mixtral does not fit into a single A100 80GB GPU** if all experts remain local to one device.
->
->To make Mixtral fit, we must enable **expert parallelism**, which splits the experts across the available GPUs:
-> ```commandline
-> trainer.strategy.expert_model_parallel_size = <number_of_gpus>
->```
 ---
+
 ### 2. What to Extract from the Logs (for both models)
 
 #### 2.1 Training Metrics (Final Iteration)
@@ -850,31 +842,30 @@ Extract:
 Use **GPU 0** consistently for all runs.
 
 ---
+
 ### 3. Scaling Table
 
 Fill in the tables below using the extracted values.
 
-## 3.1 LLaMA 3.1 8B Scaling Table (LoRA, data parallel)
+## 3.1 LLaMA 3.1 8B Scaling Table 
 
 Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
 Memory scaling = `peak_1gpu` / `peak_Ngpu`
 
 | GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
-| 1    | 8             |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 2    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**
 
 ---
 
-## 3.2 Mixtral 8×7B Scaling Table (LoRA, data parallel + expert parallel)
+## 3.2 Mixtral 8×7B Scaling Table
 
 Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
 Memory scaling = `peak_1gpu` / `peak_Ngpu`
 
 | GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
-| 2    |               |                           |                     |                         |                  |                 |                  |                       | 1.0                          |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**

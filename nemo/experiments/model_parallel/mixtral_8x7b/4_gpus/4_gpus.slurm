@@ -67,7 +67,8 @@ srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
 nemo llm finetune \
 --factory mixtral_8x7b --yes \
 trainer.devices="${SLURM_GPUS_PER_NODE}" \
-trainer.strategy.expert_model_parallel_size="${SLURM_GPUS_PER_NODE}"  \
+trainer.strategy.expert_model_parallel_size=2  \
+trainer.strategy.tensor_model_parallel_size=2 \
 trainer.strategy.sequence_parallel=True \
 trainer.max_steps=250 \
 trainer.limit_val_batches=10 \
