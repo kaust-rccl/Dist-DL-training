@@ -293,6 +293,7 @@ All ZeRO experiments follow the naming pattern:
 Where:
 
 - **xZ** → DeepSpeed ZeRO Stage (1Z = ZeRO-1, 2Z = ZeRO-2, 3Z = ZeRO-3)
+- **xZO** → The added O is for offloading
 - **xG** → Number of total GPUs   
 - **xN** → Number of nodes used in the job
 
