@@ -56,7 +56,6 @@ def end_timer_and_print(start_time):
     print(f"Total execution time = {total_time:.3f} sec")
     print(f"Max memory used by tensors = {max_mem} bytes")
 
-
 # -------------------------
 # Utility: accuracy function
 # -------------------------
