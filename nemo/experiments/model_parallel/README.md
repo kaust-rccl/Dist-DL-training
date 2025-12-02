@@ -849,12 +849,12 @@ Fill in the tables below using the extracted values.
 
 ## 3.1 LLaMA 3.1 8B Scaling Table 
 
-Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
-Memory scaling = `peak_1gpu` / `peak_Ngpu`
+Time scaling = `time_2gpu_seconds` / `time_Ngpu_seconds`  
+Memory scaling = `peak_2gpu` / `peak_Ngpu`
 
-| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
+| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 2 GPU | Peak memory scaling vs 2 GPU |
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
-| 2    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 2    |               |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**
 
@@ -862,10 +862,10 @@ Memory scaling = `peak_1gpu` / `peak_Ngpu`
 
 ## 3.2 Mixtral 8×7B Scaling Table
 
-Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
-Memory scaling = `peak_1gpu` / `peak_Ngpu`
+Time scaling = `time_4gpu_seconds` / `time_Ngpu_seconds`  
+Memory scaling = `peak_4gpu` / `peak_Ngpu`
 
-| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
+| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 4 GPU | Peak memory scaling vs 4 GPU |
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
-| 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
+| 4    |               |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**

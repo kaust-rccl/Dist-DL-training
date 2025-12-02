@@ -788,16 +788,19 @@ All SLURM logs are written under the submission directory in:
 ```commandline
 logs/<job-name>-<job-id>.out
 ```
->**Important Note About Mixtral (MoE)**
+
+> **Important Note About Mixtral (MoE)**
 >
 >Mixtral 8×7B is a **Mixture-of-Experts model**, which internally contains **8 experts per MoE layer**.  
->Even with LoRA enabled, **Mixtral does not fit into a single A100 80GB GPU** if all experts remain local to one device.
+> Even with LoRA enabled, **Mixtral does not fit into a single A100 80GB GPU** if all experts remain local to one
+> device.
 >
 >To make Mixtral fit, we must enable **expert parallelism**, which splits the experts across the available GPUs:
 > ```commandline
 > trainer.strategy.expert_model_parallel_size = <number_of_gpus>
 >```
 ---
+
 ### 2. What to Extract from the Logs (for both models)
 
 #### 2.1 Training Metrics (Final Iteration)
@@ -850,6 +853,7 @@ Extract:
 Use **GPU 0** consistently for all runs.
 
 ---
+
 ### 3. Scaling Table
 
 Fill in the tables below using the extracted values.
@@ -870,11 +874,11 @@ Memory scaling = `peak_1gpu` / `peak_Ngpu`
 
 ## 3.2 Mixtral 8×7B Scaling Table (LoRA, data parallel + expert parallel)
 
-Time scaling = `time_1gpu_seconds` / `time_Ngpu_seconds`  
-Memory scaling = `peak_1gpu` / `peak_Ngpu`
+Time scaling = `time_2gpu_seconds` / `time_Ngpu_seconds`  
+Memory scaling = `peak_2gpu` / `peak_Ngpu`
 
-| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 1 GPU | Peak memory scaling vs 1 GPU |
+| GPUs | Batch per GPU | Total job time (HH:MM:SS) | Train step time (s) | Last reduced_train_loss | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Time scaling vs 2 GPU | Peak memory scaling vs 2 GPU |
 |------|---------------|---------------------------|---------------------|-------------------------|------------------|-----------------|------------------|-----------------------|------------------------------|
-| 2    |               |                           |                     |                         |                  |                 |                  |                       | 1.0                          |
+| 2    |               |                           |                     |                         |                  |                 |                  | 1.0                   | 1.0                          |
 | 4    |               |                           |                     |                         |                  |                 |                  |                       |                              |
 | 8    |               |                           |                     |                         |                  |                 |                  |                       |                              |_**
