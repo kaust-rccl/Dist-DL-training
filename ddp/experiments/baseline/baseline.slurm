@@ -25,10 +25,9 @@ EXPERIMENT_DIR=$PWD
 export SCRIPTS_DIR="../../scripts"
 #export DATA_DIR=/ibex/ai/reference/CV/ILSVR/classification-localization/data/jpeg
 export DATA_DIR=/ibex/ai/reference/CV/tinyimagenet
-GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
-CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
+GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/${SLURM_JOB_ID}"
 
-mkdir -p "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+mkdir -p "$GPU_LOG_DIR"
 
 # ------------------------------
 # GPU Memory Logging
@@ -55,6 +54,7 @@ echo "local rank: " $LOCAL_RANK
 echo "rank: " $RANK
 
 
+declare -a SRUN_PIDS
 
 export OMP_NUM_THREADS=1
 for (( i=0; i< ${SLURM_NNODES}; i++ ))
@@ -64,25 +64,18 @@ do
      --nproc_per_node=${SLURM_GPUS_PER_NODE} --nnodes=${SLURM_NNODES} --node_rank=${i} \
      --master_addr=${master_ip} --master_port=${master_port} \
      $SCRIPTS_DIR/train.py --epochs=3 --num-workers=${SLURM_CPUS_PER_TASK} --lr=0.001 --batch-size=512 &
+     SRUN_PIDS+=($!)
 done
-wait
 
-TRAIN_PID=$!
-
-# ------------------------------
-# CPU Memory Logging
-# ------------------------------
-psrecord $TRAIN_PID --include-children --interval 5 \
-  --log "$CPU_LOG_DIR/cpu_memory_log.txt" &
-CPU_LOG_PID=$!
+for pid in "${SRUN_PIDS[@]}"; do
+    wait "$pid"
+done
 
 # ------------------------------
 # Wait & Cleanup
 # ------------------------------
-wait $TRAIN_PID
 kill $GPU_LOG_PID
-kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR" --gpu-only
 
