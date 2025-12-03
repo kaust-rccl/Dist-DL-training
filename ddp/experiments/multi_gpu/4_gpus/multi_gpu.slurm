@@ -1,8 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=ddp_N1G4
-#SBATCH --output=logs/ddp_N1G4_%j.out
-#SBATCH --error=logs/ddp_N1G4_%j.err
+#SBATCH --job-name=ddp_4G1N
+#SBATCH --output=log/%x-%j.out
 #SBATCH --gpus=4
 #SBATCH --gpus-per-node=4
 #SBATCH --ntasks=1

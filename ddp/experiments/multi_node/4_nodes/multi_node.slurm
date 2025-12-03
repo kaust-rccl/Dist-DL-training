@@ -1,8 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=ddp_N4G8
-#SBATCH --output=logs/ddp_N4G8_%j.out
-#SBATCH --error=logs/ddp_N4G8_%j.err
+#SBATCH --job-name=ddp_8G4N
+#SBATCH --output=log/%x-%j.out
 #SBATCH --gpus=8
 #SBATCH --gpus-per-node=2
 #SBATCH --ntasks=4
@@ -78,5 +77,5 @@ done
 kill $GPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR" --gpu-only
+python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
 
