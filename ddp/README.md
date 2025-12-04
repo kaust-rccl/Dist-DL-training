@@ -106,46 +106,66 @@ size.
 
 ## Experiment Setup
 
-[//]: # (TODO:)
-
 ### Directory Structure
 
 ```text
-ddp/
-├── experiments
-│   ├── baseline
-│   │   └── baseline.slurm
-│   ├── multi_gpu
-│   │   ├── 2_gpus
-│   │   │   └── multi_gpu.slurm
-│   │   ├── 4_gpus
-│   │   │   └── multi_gpu.slurm
-│   │   └── 8_gpus
-│   │       └── multi_gpu.slurm
-│   └── multi_node
-│       ├── 2_nodes
-│       │   └── multi_node.slurm
-│       ├── 4_nodes
-│       │   └── multi_node.slurm
-│       └── 8_nodes
-│           └── multi_node.slurm
-├── interactive
-│   ├── img_classifier_ddp.ipynb
-│   ├── img_classifier_vanilla.ipynb
-│   └── interactive.slurm
-├── README.md
-├── scaling
-│   ├── multi_GPU.py
-│   ├── multi_GPU.slurm
-│   ├── single_GPU.py
-│   └── single_GPU.slurm
-└── scripts
-    ├── analyze_memory.py
-    └── train.p
+ddp/                        # Root directory for all DDP training materials and scripts
+├── environment.yml         # Conda environment file with all required Python dependencies
+├── experiments             # Collection of Slurm job scripts for running DDP at different scales
+│   ├── baseline            # Single-GPU, single-node baseline experiment
+│   │   └── baseline.slurm  # Slurm script for the 1 GPU baseline run
+│   ├── multi_gpu           # Experiments scaling up GPUs on a single node
+│   │   ├── 2_gpus          # 2-GPU single-node experiment
+│   │   │   └── multi_gpu.slurm
+│   │   ├── 4_gpus          # 4-GPU single-node experiment
+│   │   │   └── multi_gpu.slurm
+│   │   └── 8_gpus          # 8-GPU single-node experiment
+│   │       └── multi_gpu.slurm
+│   └── multi_node          # Experiments scaling across multiple nodes
+│       ├── 2_nodes         # 2-node multi-GPU experiment
+│       │   └── multi_node.slurm
+│       ├── 4_nodes         # 4-node multi-GPU experiment
+│       │   └── multi_node.slurm
+│       └── 8_nodes         # 8-node multi-GPU experiment
+│           └── multi_node.slurm
+├── README.md               # Full documentation for running and analyzing all DDP experiments
+└── scripts                 # Python training and utility scripts
+    ├── analyze_memory.py   # Parses GPU memory logs and prints peak/avg/mode stats
+    └── train.py            # PyTorch DDP training script (ResNet-50 on TinyImageNet)
+
+
 ```
 ### Environment Setup
+We'll use Conda to manage packages and dependencies
+
+run these lines:
+
+```commandline
+conda env create -f environment.yml
+conda activate deepspeed-finetune
+```
 
 ### Dataset: TinyImageNet
+#### Request access for `tinyimagenet` directory
+
+Many training exercises use the TinyImageNet dataset stored in the shared data repository on IBEX.
+Please request access before the workshop as follows:
+
+- Log in to [https://my.ibex.kaust.edu.sa/](https://my.ibex.kaust.edu.sa/) using your IBEX username and password.
+
+- From the top menu, go to Reference.
+
+- In the search box, type “tinyimagenet”.
+
+- Click Request Access next to the dataset entry.
+
+- Wait for approval confirmation (usually processed within one working day).
+
+Once approved, the dataset will be accessible under the shared reference directory:
+
+````commandline
+/ibex/reference/CV/tinyimagenet
+````
 
 ---
 
@@ -365,6 +385,14 @@ if is_main_process:
   Local metrics are sufficient for demonstrating how DDP scales.
 
 The collected metrics allow clear comparison of speed, memory usage, and behavior across different GPU counts.
+
+>#### Disclaimer
+>
+> For the sake of keeping the workshop practical and fast to run on shared cluster resources, all experiments in this module use **only 3 training epochs**.  
+> This shortened schedule is intentional: it keeps runtime low while still showing clear improvements in training loss, training accuracy, throughput, and scaling behavior.  
+>
+> These results should be interpreted as a **toy example** for understanding Distributed Data Parallelism—not as a meaningful training run for ResNet-50 or TinyImageNet.  
+>In real research or production settings, you would train for many more epochs to achieve competitive accuracy.
 
 ---
 

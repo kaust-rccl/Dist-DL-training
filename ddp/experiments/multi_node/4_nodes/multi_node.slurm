@@ -77,5 +77,5 @@ done
 kill $GPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python $SCRIPTS_DIR/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR" --gpu-only
 
