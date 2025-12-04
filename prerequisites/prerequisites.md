@@ -67,7 +67,7 @@ Before the workshop:
 
 - Ensure your **IBEX account is active and accessible**.
 
-    - If you don’t yet have access, request temporary credentials via the registration form.
+    - If you don’t yet have access, contact [training@hpc.kaust.edu.sa](training@hpc.kaust.edu.sa).
 
 - Once logged in, clone the workshop materials:
 
@@ -187,7 +187,7 @@ A participant passes the sanity checks when:
 
 ## If Any Check Fails
 
-If any check fails, please contact <insert TA / workshop support contact>.
+If any check fails, please contact [training@hpc.kaust.edu.sa](training@hpc.kaust.edu.sa).
 
 ### Include:
 
