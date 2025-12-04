@@ -485,7 +485,7 @@ This lets you pair GPU and CPU utilization curves for a complete view of resourc
 - **Choosing a master node**
     ```bash
     master_ip=$(srun -n 1 -N 1 --gpus=1 -w ${head_node} /bin/hostname -I | cut -d " " -f 2)
-    master_port=10121
+    master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
     ```
   The first node in the list is designated as the **master node**:
   - Its hostname or IP address becomes the `MASTER_ADDR`.
