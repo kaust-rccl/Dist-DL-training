@@ -79,7 +79,26 @@ language models.
 
 ## Directory Overview
 
-TODO
+```text
+data_parallel/
+├── llama31_8b
+│   ├── 1_gpu
+│   │   └── single_gpu.slurm
+│   ├── 2_gpus
+│   │   └── 2_gpus.slurm
+│   ├── 4_gpus
+│   │   └── 4_gpus.slurm
+│   └── 8_gpus
+│       └── 8_gpus.slurm
+├── mixtral_8x7b
+│   ├── 2_gpus
+│   │   └── 2_gpus.slurm
+│   ├── 4_gpus
+│   │   └── 4_gpus.slurm
+│   └── 8_gpus
+│       └── 8_gpus.slurm
+└── README.md
+```
 
 ---
 

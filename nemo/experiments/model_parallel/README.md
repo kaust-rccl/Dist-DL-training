@@ -106,7 +106,22 @@ This provides a clear, hands-on understanding of the *true* model-parallel strat
 
 ## Directory Overview
 
-TODO
+```text
+model_parallel/
+├── llama31_8b
+│   ├── 2_gpus
+│   │   └── 2_gpus.slurm
+│   ├── 4_gpus
+│   │   └── 4_gpus.slurm
+│   └── 8_gpus
+│       └── 8_gpus.slurm
+├── mixtral_8x7b
+│   ├── 4_gpus
+│   │   └── 4_gpus.slurm
+│   └── 8_gpus
+│       └── 8_gpus.slurm
+└── README.md
+```
 
 ---
 
