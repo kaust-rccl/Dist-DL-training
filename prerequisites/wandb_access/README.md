@@ -37,12 +37,3 @@ To export it in all scripts at once run:
 cd ../../fsdp
 wandb_api_key.sh <YOUR_WANDB_API_KEY>
 ```
-## 4. Verify Your Authentication
-Run:
-```commandline
-wandb login
-```
-You should see:
-```commandline
-Successfully logged in to Weights & Biases!
-```

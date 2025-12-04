@@ -36,6 +36,7 @@ prerequisites/
 └── prerequisites.md   # (this file)
 
 ```
+
 ## 1. Hardware Requirements
 
 Participants must have access to:
@@ -52,7 +53,7 @@ Participants must have access to:
 
 - Participants connecting **from outside KAUST** must ensure they have a working **KAUST VPN connection**.
 
-  - Verify VPN access at least one day before the workshop.
+    - Verify VPN access at least one day before the workshop.
 
 - Test that you can connect to the IBEX login node via:
 
@@ -66,13 +67,14 @@ Before the workshop:
 
 - Ensure your **IBEX account is active and accessible**.
 
-  - If you don’t yet have access, request temporary credentials via the registration form.
+    - If you don’t yet have access, request temporary credentials via the registration form.
 
 - Once logged in, clone the workshop materials:
 
     ```commandline
     git clone https://github.com/kaust-rccl/Dist-DL-training.git
     ```
+
 ## 4. Recommended Prior Sessions
 
 To get the most out of this workshop, it is **strongly recommended** that participants have:
@@ -112,7 +114,30 @@ Basic familiarity with:
 /ibex/user/<username> is accessible.
 ```
 
+#### Request access for `tinyimagenet` directory
+
+Many training exercises use the TinyImageNet dataset stored in the shared data repository on IBEX.
+Please request access before the workshop as follows:
+
+- Log in to [https://my.ibex.kaust.edu.sa/](https://my.ibex.kaust.edu.sa/) using your IBEX username and password.
+
+- From the top menu, go to Reference.
+
+- In the search box, type “tinyimagenet”.
+
+- Click Request Access next to the dataset entry.
+
+- Wait for approval confirmation (usually processed within one working day).
+
+Once approved, the dataset will be accessible under the shared reference directory:
+
+````commandline
+/ibex/reference/CV/tinyimagenet
+````
+
 #### Access check for `tinyimagenet` directory
+
+Now that your access is approved, the summary for `tinyimagenet` directory check should look like this:
 
 ```commandline
 [✓] Path exists and is a directory
@@ -159,20 +184,6 @@ A participant passes the sanity checks when:
 - No `[✗]` markers or SLURM step errors appear
 
 - `nvidia-smi` lists the expected GPU models (V100 or A100)
-
-### Weights and Biases Authentication
-
-Run:
-
-```commandline
-wandb login
-```
-
-You should see:
-
-```commandline
-Successfully logged in to Weights & Biases!
-```
 
 ## If Any Check Fails
 

@@ -13,6 +13,27 @@ These checks are intended for lightweight validation before workshops, training 
 | `user_space_access.sh`  | Verifies the user’s `/ibex/user/$USER` directory: path, permissions, write/read/delete tests. |
 | `dataset_access.sh`     | Verifies access to `/ibex/reference/CV/tinyimagenet`: path, permissions, readability.         |
 
+## Request access for `tinyimagenet` directory
+
+Many training exercises use the TinyImageNet dataset stored in the shared data repository on IBEX.
+Please request access before the workshop as follows:
+
+- Log in to [https://my.ibex.kaust.edu.sa/](https://my.ibex.kaust.edu.sa/) using your IBEX username and password.
+
+- From the top menu, go to Reference.
+
+- In the search box, type “tinyimagenet”.
+
+- Click Request Access next to the dataset entry.
+
+- Wait for approval confirmation (usually processed within one working day).
+
+Once approved, the dataset will be accessible under the shared reference directory:
+
+````commandline
+/ibex/reference/CV/tinyimagenet
+````
+
 ## Running All Checks
 To run every filesystem test at once:
 ```commandline
