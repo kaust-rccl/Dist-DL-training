@@ -25,6 +25,7 @@ from torchvision.datasets import ImageFolder
 from torchvision.models import resnet50
 from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
+from torch.utils.tensorboard import SummaryWriter
 
 
 # -------------------------
@@ -55,6 +56,7 @@ def end_timer_and_print(start_time):
     print("Finished Training")
     print(f"Total execution time = {total_time:.3f} sec")
     print(f"Max memory used by tensors = {max_mem} bytes")
+
 
 # -------------------------
 # Utility: accuracy function
@@ -92,6 +94,18 @@ def train_and_validate(args):
 
     # For performance (not strictly deterministic)
     torch.backends.cudnn.benchmark = True
+
+    # -------------------------
+    # TensorBoard setup (rank 0 only)
+    # -------------------------
+    writer = None
+    if is_main_process:
+        log_dir = os.path.join(
+            "runs",
+            datetime.now().strftime("ddp_resnet50_%Y%m%d-%H%M%S"),
+        )
+        writer = SummaryWriter(log_dir=log_dir)
+        print(f"[Rank 0] TensorBoard logging to: {log_dir}")
 
     # -------------------------
     # Model, criterion, optimizer, scheduler, scaler
@@ -195,12 +209,16 @@ def train_and_validate(args):
         # still create variable for consistency; not used on non-main ranks
         start_time = None
 
+    device = torch.device("cuda", local_rank)
+
     # -------------------------
     # Training loop
     # -------------------------
     for epoch in range(args.epochs):
         # Let the sampler shuffle differently each epoch
         train_sampler.set_epoch(epoch)
+
+        epoch_start = time.perf_counter()
 
         # ---- TRAIN ----
         model.train()
@@ -254,24 +272,61 @@ def train_and_validate(args):
                 epoch_val_correct += top1_accuracy(outputs, labels)
                 epoch_val_samples += batch_size
 
-        local_val_loss = epoch_val_loss / epoch_val_samples
-        local_val_acc = 100.0 * epoch_val_correct / epoch_val_samples
+        # -------------------------
+        # Reduce metrics across all ranks to get GLOBAL stats
+        # -------------------------
+        t_loss_tensor = torch.tensor([epoch_train_loss], device=device)
+        t_corr_tensor = torch.tensor([epoch_train_correct], device=device)
+        t_samples_tensor = torch.tensor([epoch_train_samples], device=device)
+
+        v_loss_tensor = torch.tensor([epoch_val_loss], device=device)
+        v_corr_tensor = torch.tensor([epoch_val_correct], device=device)
+        v_samples_tensor = torch.tensor([epoch_val_samples], device=device)
+
+        dist.all_reduce(t_loss_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(t_corr_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(t_samples_tensor, op=dist.ReduceOp.SUM)
+
+        dist.all_reduce(v_loss_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(v_corr_tensor, op=dist.ReduceOp.SUM)
+        dist.all_reduce(v_samples_tensor, op=dist.ReduceOp.SUM)
+
+        global_train_loss = t_loss_tensor.item() / t_samples_tensor.item()
+        global_train_acc = 100.0 * t_corr_tensor.item() / t_samples_tensor.item()
+        global_val_loss = v_loss_tensor.item() / v_samples_tensor.item()
+        global_val_acc = 100.0 * v_corr_tensor.item() / v_samples_tensor.item()
+
+        epoch_end = time.perf_counter()
+        epoch_duration = epoch_end - epoch_start
+        global_train_samples = t_samples_tensor.item()
+        throughput = global_train_samples / epoch_duration  # images per second (global)
+
+        current_lr = scheduler.get_last_lr()[0]
 
         if is_main_process:
-            current_lr = scheduler.get_last_lr()[0]
-            # You can adjust this format to match your old style if you like
             print(
                 f"Epoch [{epoch + 1}/{args.epochs}] "
                 f"LR: {current_lr:.6f} | "
-                f"Loss (train, val): {local_train_loss:.3f}, {local_val_loss:.3f} | "
-                f"Accuracy (train, val): {local_train_acc:.2f}%, {local_val_acc:.2f}%"
+                f"Loss (train, val): {global_train_loss:.3f}, {global_val_loss:.3f} | "
+                f"Accuracy (train, val): {global_train_acc:.2f}%, {global_val_acc:.2f}%"
+                f"Throughput: {throughput:.1f} img/s"
             )
+
+            if writer is not None:
+                writer.add_scalar("Loss/train", global_train_loss, epoch)
+                writer.add_scalar("Loss/val", global_val_loss, epoch)
+                writer.add_scalar("Accuracy/train", global_train_acc, epoch)
+                writer.add_scalar("Accuracy/val", global_val_acc, epoch)
+                writer.add_scalar("Throughput/images_per_sec", throughput, epoch)
+                writer.add_scalar("LR", current_lr, epoch)
 
         scheduler.step()
 
     # Final timing & memory print on rank 0
     if is_main_process:
         end_timer_and_print(start_time)
+        if writer is not None:
+            writer.close()
 
 
 # -------------------------
@@ -340,4 +395,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
