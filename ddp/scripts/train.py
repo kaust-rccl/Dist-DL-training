@@ -308,7 +308,7 @@ def train_and_validate(args):
                 f"Epoch [{epoch + 1}/{args.epochs}] "
                 f"LR: {current_lr:.6f} | "
                 f"Loss (train, val): {global_train_loss:.3f}, {global_val_loss:.3f} | "
-                f"Accuracy (train, val): {global_train_acc:.2f}%, {global_val_acc:.2f}%"
+                f"Accuracy (train, val): {global_train_acc:.2f}%, {global_val_acc:.2f}% | "
                 f"Throughput: {throughput:.1f} img/s"
             )
 

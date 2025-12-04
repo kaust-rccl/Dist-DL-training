@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --constraint=v100
-#SBATCH --time=03:00:00
+#SBATCH --time=00:30:00
 
 scontrol show job $SLURM_JOBID 
 
@@ -61,7 +61,7 @@ do
       python -m torch.distributed.launch --use_env \
      --nproc_per_node=${SLURM_GPUS_PER_NODE} --nnodes=${SLURM_NNODES} --node_rank=${i} \
      --master_addr=${master_ip} --master_port=${master_port} \
-     $SCRIPTS_DIR/train.py --epochs=50 --num-workers=${SLURM_CPUS_PER_TASK}  --lr=0.001 --batch-size=512 &
+     $SCRIPTS_DIR/train.py --epochs=3 --num-workers=${SLURM_CPUS_PER_TASK}  --lr=0.001 --batch-size=512 &
      SRUN_PIDS+=($!)
 done
 
