@@ -2,9 +2,9 @@
 
 #SBATCH --job-name=ddp_2G2N
 #SBATCH --output=log/%x-%j.out
-#SBATCH --gpus=2
+#SBATCH --gpus=4
 #SBATCH --gpus-per-node=2
-#SBATCH --ntasks=1
+#SBATCH --ntasks=2
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
