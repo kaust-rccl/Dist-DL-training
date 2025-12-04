@@ -142,7 +142,7 @@ run these lines:
 
 ```commandline
 conda env create -f environment.yml
-conda activate deepspeed-finetune
+conda activate ddp
 ```
 
 ### Dataset: TinyImageNet
