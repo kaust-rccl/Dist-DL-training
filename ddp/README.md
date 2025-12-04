@@ -200,14 +200,17 @@ val_loader = DataLoader(val_dataset, batch_size=args.batch_size,
   `DistributedSampler` splits the dataset into `world_size` equal shards and assigns one shard to each GPU.
 
 - **Why sharding is required**  
-  Without it, all GPUs would process the same samples, wasting compute and incorrectly increasing the effective batch size.
+  Without it, all GPUs would process the same samples, wasting compute and incorrectly increasing the effective batch
+  size.
 
 - **Shuffling**  
   When using multiple GPUs, shuffling must be coordinated.  
-  Calling `sampler.set_epoch(epoch)` will ensures all processes shuffle consistently while still getting non-overlapping data.
+  Calling `sampler.set_epoch(epoch)` will ensures all processes shuffle consistently while still getting non-overlapping
+  data.
 
 - **Validation sharding**  
-  Although validation does not require gradient synchronization, sharded validation avoids duplicate compute and keeps evaluation consistent across ranks.
+  Although validation does not require gradient synchronization, sharded validation avoids duplicate compute and keeps
+  evaluation consistent across ranks.
 
 - **DataLoader interaction**  
   The DataLoader reads only the shard assigned by the sampler.  
@@ -257,7 +260,6 @@ scaler.update()
 
 This loop demonstrates the core idea of data-parallel training: parallel computation + synchronized gradients.
 
-
 ### Validation Loop
 
 ```python
@@ -293,20 +295,23 @@ This loop verifies the model’s performance without affecting training.
 local_train_loss = epoch_train_loss / epoch_train_samples
 local_train_acc = 100.0 * epoch_train_correct / epoch_train_samples
 ```
+
 Only rank 0 prints:
+
 ```python
 if is_main_process:
     print(f"... training and validation metrics ...")
 
 ```
+
 ### Metrics & Logging
 
 - **Local per-rank metrics**  
   Each GPU calculates:
-  - training loss on its own shard  
-  - training accuracy on its own shard  
-  - validation loss on its own shard  
-  - validation accuracy on its own shard  
+    - training loss on its own shard
+    - training accuracy on its own shard
+    - validation loss on its own shard
+    - validation accuracy on its own shard
 
 - **Rank 0 logging**  
   Only rank 0 prints metrics to avoid duplicate logs.  
@@ -314,15 +319,15 @@ if is_main_process:
 
 - **Timing metrics**  
   The script measures:
-  - total training time  
-  - per-epoch training progress  
-  - data loading time indirectly (via speed differences)  
+    - total training time
+    - per-epoch training progress
+    - data loading time indirectly (via speed differences)
 
 - **Memory metrics**  
   `torch.cuda.max_memory_allocated()` reports the peak GPU memory used by tensors.  
   This helps compare:
-  - 1 GPU vs multi-GPU runs  
-  - DDP vs future methods like FSDP or ZeRO  
+    - 1 GPU vs multi-GPU runs
+    - DDP vs future methods like FSDP or ZeRO
 
 - **Purpose of local metrics**  
   Although only rank 0 logs them, each GPU contributes equally to model updates via gradient averaging.  
@@ -337,6 +342,7 @@ The collected metrics allow clear comparison of speed, memory usage, and behavio
 ### Resources Requested
 
 The Slurm directives at the top of the script request:
+
 ```bash
 #SBATCH --gpus=1
 #SBATCH --gpus-per-node=1
@@ -347,16 +353,17 @@ The Slurm directives at the top of the script request:
 #SBATCH --constraint=v100
 #SBATCH --time=00:30:00
 ```
+
 - **CPUs, GPUs, and nodes**
-  - A certain number of **nodes** (e.g., 1 or more)  
-  - A fixed number of **tasks per node** (usually 1 launcher task per node)  
-  - A fixed number of **GPUs per node** (e.g., 1, 2, 4, or 8)  
-  - A specific number of **CPUs per task** (for data loading and Python overhead)  
+    - A certain number of **nodes** (e.g., 1 or more)
+    - A fixed number of **tasks per node** (usually 1 launcher task per node)
+    - A fixed number of **GPUs per node** (e.g., 1, 2, 4, or 8)
+    - A specific number of **CPUs per task** (for data loading and Python overhead)
 
   Conceptually:
-  - Each node runs one launcher process.
-  - Each launcher process starts multiple worker processes (one per GPU).
-  - The total number of DDP processes = `num_nodes * gpus_per_node`.
+    - Each node runs one launcher process.
+    - Each launcher process starts multiple worker processes (one per GPU).
+    - The total number of DDP processes = `num_nodes * gpus_per_node`.
 
 - **Memory and time**
   The script also requests a certain amount of **system memory** (in GB) and a **wall-clock time limit**.  
@@ -372,6 +379,7 @@ Together, these directives define the hardware envelope for the DDP job.
 ### Key Environment Variables
 
 During setup, the script defines and/or uses several critical environment variables:
+
 ```bash
 module load dl pytorch
 
@@ -386,27 +394,26 @@ CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 
 mkdir -p "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 ```
+
 - **Module Environment**  
   The script loads a PyTorch or deep-learning module stack so that:
     - `python` refers to the correct interpreter.
         - `torch`, `torchvision`, and other libraries are available.
 
 - **NCCL-related settings (e.g., NCCL_SOCKET_IFNAME)**  
-          These control which network interface NCCL uses for communication (e.g., `ib0` for InfiniBand).  
-      Setting this explicitly can avoid using the wrong interface and improve stability.
+  These control which network interface NCCL uses for communication (e.g., `ib0` for InfiniBand).  
+  Setting this explicitly can avoid using the wrong interface and improve stability.
 
 - **Misc debugging variables (e.g., NCCL_DEBUG, PYTHONFAULTHANDLER)**  
-      These enable detailed debugging logs for NCCL and Python exceptions, which is useful for workshop troubleshooting.
+  These enable detailed debugging logs for NCCL and Python exceptions, which is useful for workshop troubleshooting.
 
 - **DATA_DIR**  
-          Points to the root directory containing the dataset (TinyImageNet in this exercise).  
-      The Python script reads this path to locate the `train` and `val` subfolders.
+  Points to the root directory containing the dataset (TinyImageNet in this exercise).  
+  The Python script reads this path to locate the `train` and `val` subfolders.
 
 - **SCRIPTS_DIR**  
-          Points to the directory containing the training and analysis scripts.  
-          This lets the Slurm script call the training Python file and any post-processing utilities.
-
-
+  Points to the directory containing the training and analysis scripts.  
+  This lets the Slurm script call the training Python file and any post-processing utilities.
 
 These environment variables ensure that both the Python script and NCCL run in a configured, reproducible environment.
 
@@ -423,15 +430,15 @@ GPU_LOG_PID=$!
 
 - **Global nvidia-smi logger**
   At job start, the script launches `nvidia-smi` in the background with:
-  - A query for each GPU’s memory usage and total memory.
-  - A fixed sampling interval (e.g., every 5 seconds).
-  - Output redirected to a CSV file under a `gpu_memory` directory, often organized by job ID.
+    - A query for each GPU’s memory usage and total memory.
+    - A fixed sampling interval (e.g., every 5 seconds).
+    - Output redirected to a CSV file under a `gpu_memory` directory, often organized by job ID.
 
 - **Purpose**
   This logger provides:
-  - A time series of **GPU memory usage** during the entire job.
-  - The ability to visualize how memory changes over epochs and across different GPU counts.
-  - A simple way to compare DDP runs with later experiments (FSDP, ZeRO, etc.).
+    - A time series of **GPU memory usage** during the entire job.
+    - The ability to visualize how memory changes over epochs and across different GPU counts.
+    - A simple way to compare DDP runs with later experiments (FSDP, ZeRO, etc.).
 
 - **Lifetime**
   The logger runs in the background while training is active and is explicitly killed near the end of the script.
@@ -441,28 +448,30 @@ This gives participants a low-friction way to inspect how “full” each GPU wa
 ---
 
 ### CPU Memory Logging
+
 ```bash
 psrecord $TRAIN_PID --include-children --interval 5 \
   --log "$CPU_LOG_DIR/cpu_memory_log.txt" &
 CPU_LOG_PID=$!
 ```
+
 - **psrecord-based logging**
   The script uses `psrecord` to track:
-  - CPU memory usage of the main training process (and its children).
-  - CPU utilization over time.
+    - CPU memory usage of the main training process (and its children).
+    - CPU utilization over time.
 
   The typical pattern is:
-  - Identify the PID of the main training launcher.
-  - Start `psrecord` in the background, with:
-    - `--include-children` to capture all worker processes.
-    - A fixed logging interval (e.g., every few seconds).
-    - Output to a CPU log file in a `cpu_memory` directory.
+    - Identify the PID of the main training launcher.
+    - Start `psrecord` in the background, with:
+        - `--include-children` to capture all worker processes.
+        - A fixed logging interval (e.g., every few seconds).
+        - Output to a CPU log file in a `cpu_memory` directory.
 
 - **Purpose**
   This provides a timeline of:
-  - CPU RAM usage.
-  - CPU load.
-  - Effects of different configurations (more GPUs, more workers, different batch sizes).
+    - CPU RAM usage.
+    - CPU load.
+    - Effects of different configurations (more GPUs, more workers, different batch sizes).
 
 - **Cleanup**
   Like the GPU logger, the CPU logger is terminated when the training process finishes.
@@ -478,7 +487,7 @@ This lets you pair GPU and CPU utilization curves for a complete view of resourc
     head_node="${nodes_array[0]}"
     echo "Getting the IP address of the head node ${head_node}"
     ```
-    The script obtains the list of allocated nodes from Slurm:
+  The script obtains the list of allocated nodes from Slurm:
     - It queries the node list associated with the job.
     - Converts that into an array of hostnames.
 
@@ -488,8 +497,8 @@ This lets you pair GPU and CPU utilization curves for a complete view of resourc
     master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
     ```
   The first node in the list is designated as the **master node**:
-  - Its hostname or IP address becomes the `MASTER_ADDR`.
-  - A fixed or dynamically chosen port becomes the `MASTER_PORT`.
+    - Its hostname or IP address becomes the `MASTER_ADDR`.
+    - A fixed or dynamically chosen port becomes the `MASTER_PORT`.
 
 - **Per-node launcher**
     ```bash
@@ -505,31 +514,33 @@ This lets you pair GPU and CPU utilization curves for a complete view of resourc
     wait
     ```
   For each node in the allocation:
-  - The script starts a single `srun` launcher task on that node.
-  - That launcher calls PyTorch’s distributed launcher (e.g., `torch.distributed.launch`) or `torchrun`.
-  - The launcher is given:
-    - The total number of nodes.
-    - The number of processes per node (i.e., GPUs per node).
-    - The node’s rank in the cluster (node_rank).
-    - The master address and master port.
+    - The script starts a single `srun` launcher task on that node.
+    - That launcher calls PyTorch’s distributed launcher (e.g., `torch.distributed.launch`) or `torchrun`.
+    - The launcher is given:
+        - The total number of nodes.
+        - The number of processes per node (i.e., GPUs per node).
+        - The node’s rank in the cluster (node_rank).
+        - The master address and master port.
 
 - **World size and ranks**
   Across all nodes, the total number of processes (`WORLD_SIZE`) equals:
-  - `num_nodes * gpus_per_node`.
-  Each process is assigned:
-  - A unique global `RANK` (0 to WORLD_SIZE - 1).
-  - A `LOCAL_RANK` determining which GPU it controls on its node.
+    - `num_nodes * gpus_per_node`.
+      Each process is assigned:
+    - A unique global `RANK` (0 to WORLD_SIZE - 1).
+    - A `LOCAL_RANK` determining which GPU it controls on its node.
 
 - **Synchronization**
   All processes connect to the master address and port and join the same process group.  
   Once this group is formed, DDP can run across all nodes as if they were a single large machine.
 
 This multi-node logic allows the same training script to scale from:
+
 - 1 GPU on 1 node,
 - to many GPUs across multiple nodes,
-without changing the Python code—only the Slurm resources and launch parameters change.
+  without changing the Python code—only the Slurm resources and launch parameters change.
 
 ---
+
 ## Running the Experiments
 
 ### 1 GPU (single process)
@@ -537,20 +548,22 @@ without changing the Python code—only the Slurm resources and launch parameter
 Goal: establish a simple **baseline** for accuracy, runtime, and memory usage.
 
 What this run represents:
+
 - Only **one GPU** is used.
 - DDP still works, but effectively behaves like standard single-GPU training (`WORLD_SIZE = 1`).
 - No real speedup from parallelism, but:
-  - The code path is identical to multi-GPU runs.
-  - It confirms that the script, dataset path, and environment are correct.
+    - The code path is identical to multi-GPU runs.
+    - It confirms that the script, dataset path, and environment are correct.
 
 How to run (conceptually):
+
 - Request 1 node with 1 GPU in your Slurm script.
 - Submit the job (e.g., `sbatch ddp_1g1n.slurm`).
 - Record:
-  - Total training time
-  - Final train/val accuracy
-  - Max GPU memory usage
-  - CPU usage from the logs
+    - Total training time
+    - Final train/val accuracy
+    - Max GPU memory usage
+    - CPU usage from the logs
 
 You will later compare all other runs against this 1-GPU baseline.
 
@@ -561,23 +574,26 @@ You will later compare all other runs against this 1-GPU baseline.
 Goal: demonstrate **intra-node scaling** and verify that DDP really uses both GPUs.
 
 What this run represents:
+
 - **2 processes** are started on the same node, each bound to a different GPU.
 - The dataset is split into 2 shards (one per GPU).
 - Gradients are averaged across both GPUs at each step.
 
 Expected behavior:
+
 - Training time per epoch should decrease compared to 1 GPU.
 - GPU memory per process may be similar, but total global batch size doubles (if per-GPU batch size stays the same).
 - Accuracy and loss curves should look similar to the 1-GPU case (same effective training, just faster).
 
 How to run (conceptually):
+
 - Request 1 node with 2 GPUs.
 - Use the same training script and Slurm logic, but with `gpus-per-node=2`.
 - Submit the job (e.g., `sbatch ddp_2g1n.slurm`).
 - Compare:
-  - Runtime vs 1 GPU
-  - GPU memory profile
-  - Speedup (1G vs 2G)
+    - Runtime vs 1 GPU
+    - GPU memory profile
+    - Speedup (1G vs 2G)
 
 This run shows participants how adding a second GPU affects performance and resource use.
 
@@ -588,23 +604,26 @@ This run shows participants how adding a second GPU affects performance and reso
 Goal: explore **stronger scaling** on a single node and show diminishing returns / overheads.
 
 What this run represents:
+
 - **4 processes** on one node, each mapped to a different GPU.
 - The dataset is now split into 4 shards.
 - Gradients are synchronized across all 4 GPUs after every backward pass.
 
 Expected behavior:
+
 - Training time per epoch should further decrease, but not by a perfect factor of 4.
 - Communication overhead (AllReduce) becomes more visible.
 - Global batch size = `4 × (per-GPU batch size)`, unless you adjust per-GPU batch.
 
 How to run (conceptually):
+
 - Request 1 node with 4 GPUs.
 - Keep the same script and launch logic but adjust Slurm to `gpus-per-node=4`.
 - Submit the job (e.g., `sbatch ddp_4g1n.slurm`).
 - Compare against 1-GPU and 2-GPU runs:
-  - Runtime and speedup
-  - GPU utilization
-  - Memory usage per GPU
+    - Runtime and speedup
+    - GPU utilization
+    - Memory usage per GPU
 
 This run illustrates the trend: **more GPUs → faster**, but not perfectly linear due to communication costs.
 
@@ -615,6 +634,7 @@ This run illustrates the trend: **more GPUs → faster**, but not perfectly line
 Goal: show that exactly the same training script can scale **across nodes**, not just across GPUs on a single node.
 
 What this run represents:
+
 - Slurm allocates **2 nodes**.
 - Each node has **N GPUs** (e.g., 2 or 4).
 - One node is chosen as the **master** (rendezvous point).
@@ -622,40 +642,47 @@ What this run represents:
 - NCCL uses the cluster’s high-speed network (e.g., InfiniBand) to synchronize gradients across nodes.
 
 Expected behavior:
+
 - Further reduction in training time, assuming the per-GPU batch size stays constant.
 - Inter-node communication overhead appears, so scaling is less ideal than within a single node.
 - Metrics (loss, accuracy) should match the behavior of single-node runs with the same global batch size.
 
 How to run (conceptually):
+
 - Request 2 nodes in your Slurm directives.
 - Keep `gpus-per-node = N` (e.g., 2 or 4).
 - Ensure the launch logic:
-  - Discovers all nodes from `SLURM_JOB_NODELIST`.
-  - Picks a `MASTER_ADDR` (from the first node) and a `MASTER_PORT`.
-  - Assigns `node_rank` = 0 for the first node, 1 for the second.
+    - Discovers all nodes from `SLURM_JOB_NODELIST`.
+    - Picks a `MASTER_ADDR` (from the first node) and a `MASTER_PORT`.
+    - Assigns `node_rank` = 0 for the first node, 1 for the second.
 - Submit the job (e.g., `sbatch ddp_ng2n.slurm` for “N GPUs × 2 nodes”).
 
 What to compare:
+
 - Single-node vs multi-node runtime for the same total number of GPUs.
 - GPU and CPU utilization patterns.
 - Any new issues (e.g., NCCL timeouts, port conflicts, misconfigured interfaces).
 
-This run completes the story: from single-GPU DDP to multi-GPU single-node, then to **multi-node DDP**, using one unified training script and only changing the Slurm resource request.
+This run completes the story: from single-GPU DDP to multi-GPU single-node, then to **multi-node DDP**, using one
+unified training script and only changing the Slurm resource request.
 
 ---
 
 ## Running the Experiments
 
-Each experiment is launched simply by navigating to the correct directory and submitting the corresponding Slurm script.  
+Each experiment is launched simply by navigating to the correct directory and submitting the corresponding Slurm
+script.  
 No Python code changes are required — only the Slurm resource request changes.
 
 ### Job Submissions
 
 #### 1 GPU (single process)
+
 ```commandline
 cd experiments/baseline
 sbatch baseline.slurm
 ```
+
 --- 
 
 #### 2 GPUs (single node)
@@ -664,6 +691,7 @@ sbatch baseline.slurm
 cd experiments/multi_gpu/2_gpus
 sbatch multi_gpu.slurm
 ```
+
 #### 4 GPUs (single node)
 
 ```commandline
@@ -681,32 +709,140 @@ sbatch multi_gpu.slurm
 ---
 
 #### Multi-Node (2 nodes × 2 GPUs)
+
 ```commandline
 cd experiments/multi_node/2_nodes
 sbatch multi_node.slurm
 ```
 
 #### Multi-Node (4 nodes × 2 GPUs)
+
 ```commandline
 cd experiments/multi_node/4_nodes
 sbatch multi_node.slurm
 ```
 
 #### Multi-Node (8 nodes × 2 GPUs)
+
 ```commandline
 cd experiments/multi_node/8_nodes
 sbatch multi_node.slurm
 ```
 
 Each script automatically:
-- Detects the allocated Slurm nodes  
-- Sets up MASTER_ADDR / MASTER_PORT  
-- Launches the correct number of processes per node  
-- Starts GPU and CPU logging  
-- Runs the DDP training script with the appropriate world size  
 
-This keeps the training code unchanged while letting you scale from 1 GPU → multi-GPU → multi-node with only a directory change and one `sbatch` command.
+- Detects the allocated Slurm nodes
+- Sets up MASTER_ADDR / MASTER_PORT
+- Launches the correct number of processes per node
+- Starts GPU and CPU logging
+- Runs the DDP training script with the appropriate world size
+
+This keeps the training code unchanged while letting you scale from 1 GPU → multi-GPU → multi-node with only a directory
+change and one `sbatch` command.
 
 ### Expected Output and Metrics Extraction
 
-[//]: # (TODO: once the hanging issue is resolved.)
+#### Training Output
+
+The log file for every job will be located at:
+
+```commandline
+cd <submission_dir>/log
+```
+
+It will be under the name:
+
+```commandline
+<job_name>_<job_id>.out
+```
+
+For each run, the training script will print one summary line per epoch on rank 0.  
+You are interested in the **last epoch** (epoch 3 in this example):
+
+```text
+...
+Epoch [3/3] LR: 0.001000 | Loss (train, val): 5.149, 5.664 | Accuracy (train, val): 2.16%, 0.98% | Throughput: 704.9 img/s
+...
+```
+
+From this line, extract:
+
+- **Train loss** (epoch 3) → 5.149
+
+- **Train accuracy** (epoch 3) → 2.16%%
+
+- **Throughput** (epoch 3) → 704.9 img/s
+
+You will copy these values into the tables below for each configuration (1, 2, 4, 8 GPUs or nodes).
+
+#### GPU Memory Output (analyze_memory.py)
+
+At the end of the job, the memory analysis script prints a summary for each GPU.
+You will use the line corresponding to **GPU 0**:
+
+```text
+[gpu_memory_log - GPU 0] Peak = 26532 MiB, Avg = 22458.63 MiB, Mode = 26532 MiB
+```
+
+From this line, extract:
+
+- **GPU 0 Peak** memory → 26532 MiB
+- **GPU 0 Average** memory → 22458.63 MiB
+- **GPU 0 Mode** memory → 26532 MiB
+
+You will copy these values into the same tables, under GPU 0 (Peak / Avg / Mode).
+
+### Multi-GPU Scaling (1 Node)
+
+Use this table to compare **1, 2, 4, 8 GPUs on a single node**, using the same Slurm script family:
+
+- `baseline.slurm` → [1 GPU](./experiments/baseline)
+
+- `multi_gpu.slurm` in [`2_gpus`](./experiments/multi_gpu/2_gpus), [`4_gpus`](./experiments/multi_gpu/4_gpus), [
+  `8_gpus`](./experiments/multi_gpu/8_gpus)
+
+Fill the table with values from:
+
+- The **epoch 3** training line printed by the script.
+
+- The **GPU 0** memory summary from analyze_memory.py.
+
+Compute scaling factors relative to 1 GPU, 1 node:
+
+- **Throughput Scaling** = `Throughput_config / Throughput_1G`
+
+- **Memory Avg Scaling** = `GPU0_Avg_config / GPU0_Avg_1G`
+
+| Config                   | Train Loss (Epoch 3) | Train Acc (Epoch 3) | Throughput (img/s) | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Throughput Scaling vs 1G | Memory Avg Scaling vs 1G |
+|--------------------------|----------------------|---------------------|--------------------|------------------|-----------------|------------------|--------------------------|--------------------------|
+| 1 GPU, 1 Node (baseline) |                      |                     |                    |                  |                 |                  | 1.0×                     | 1.0×                     |
+| 2 GPUs, 1 Node           |                      |                     |                    |                  |                 |                  |                          |                          |
+| 4 GPUs, 1 Node           |                      |                     |                    |                  |                 |                  |                          |                          |
+| 8 GPUs, 1 Node           |                      |                     |                    |                  |                 |                  |                          |                          |
+
+### Multi-Node Scaling (Fixed GPUs per Node)
+
+Use this table to compare **1 node vs 2, 4, 8 nodes,** keeping the same number of GPUs per node (as defined in your
+multi-node Slurm scripts).
+
+You will use:
+
+- `baseline.slurm` → [1 GPU](./experiments/baseline)
+
+- `multi_node.slurm` in [`2_nodes`](./experiments/multi_node/2_nodes), [`4_nodes`](./experiments/multi_node/4_nodes), [
+  `8_nodes`](./experiments/multi_node/8_nodes)
+
+Again, extract values from **epoch 3** and **GPU 0**’ s memory stats.
+
+Compute scaling factors relative to 1 GPU, 1 node:
+
+- **Throughput Scaling** = `Throughput_config / Throughput_1G`
+
+- **Memory Avg Scaling** = `GPU0_Avg_config / GPU0_Avg_1G`
+
+| Config            | Train Loss (Epoch 3) | Train Acc (Epoch 3) | Throughput (img/s) | GPU 0 Peak (MiB) | GPU 0 Avg (MiB) | GPU 0 Mode (MiB) | Throughput Scaling vs 1N | Memory Avg Scaling vs 1N |
+|-------------------|----------------------|---------------------|--------------------|------------------|-----------------|------------------|--------------------------|--------------------------|
+| 1 Node (baseline) |                      |                     |                    |                  |                 |                  | 1.0×                     | 1.0×                     |
+| 2 Nodes           |                      |                     |                    |                  |                 |                  |                          |                          |
+| 4 Nodes           |                      |                     |                    |                  |                 |                  |                          |                          |
+| 8 Nodes           |                      |                     |                    |                  |                 |                  |                          |                          |
