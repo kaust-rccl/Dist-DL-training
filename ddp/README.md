@@ -506,39 +506,6 @@ This gives participants a low-friction way to inspect how “full” each GPU wa
 
 ---
 
-### CPU Memory Logging
-
-```bash
-psrecord $TRAIN_PID --include-children --interval 5 \
-  --log "$CPU_LOG_DIR/cpu_memory_log.txt" &
-CPU_LOG_PID=$!
-```
-
-- **psrecord-based logging**
-  The script uses `psrecord` to track:
-    - CPU memory usage of the main training process (and its children).
-    - CPU utilization over time.
-
-  The typical pattern is:
-    - Identify the PID of the main training launcher.
-    - Start `psrecord` in the background, with:
-        - `--include-children` to capture all worker processes.
-        - A fixed logging interval (e.g., every few seconds).
-        - Output to a CPU log file in a `cpu_memory` directory.
-
-- **Purpose**
-  This provides a timeline of:
-    - CPU RAM usage.
-    - CPU load.
-    - Effects of different configurations (more GPUs, more workers, different batch sizes).
-
-- **Cleanup**
-  Like the GPU logger, the CPU logger is terminated when the training process finishes.
-
-This lets you pair GPU and CPU utilization curves for a complete view of resource behavior during the experiment.
-
----
-
 ### Multi-Node Launch Logic
 
 - **Node discovery**
