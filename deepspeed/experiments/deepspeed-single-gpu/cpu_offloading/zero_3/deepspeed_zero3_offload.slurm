@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=zero3-cpu-offload-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=3ZO-1G1N                    # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                             # Number of tasks
 #SBATCH --tasks-per-node=1                     # One task per node
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task
@@ -26,6 +26,13 @@ GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+
 # ------------------------------
 # Environment Setup
 # ------------------------------
@@ -41,10 +48,28 @@ nvidia-smi \
   --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
 GPU_LOG_PID=$!
 
+# ----------------------------
+# Discover participating nodes
+# ----------------------------
+nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")         # Get list of hostnames in this job
+nodes_array=($nodes)                                           # Split the list into a Bash array
+echo "Node IDs of participating nodes: ${nodes_array[*]}"      # Print out the node hostnames
+
+# -----------------------------------------
+# Determine MASTER node IP and open port
+# -----------------------------------------
+head_node="${nodes_array[0]}"                                           # Choose the first node as the master
+echo "Head node hostname: ${head_node}"
+master_ip=$(srun -n1 -N1 -w ${head_node} hostname -I | cut -d " " -f2)  # Fetch the IP address of the head node
+master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')  # Find a free TCP port dynamically
+echo "Master endpoint: ${master_ip}:${master_port}"
+
 # ------------------------------
 # Launch Training
 # ------------------------------
-python scripts/train.py --deepspeed ds_configs/zero3_cpu_offload.json &
+python -m torch.distributed.run \
+--rdzv_endpoint="$master_ip":"$master_port" \
+scripts/train.py --deepspeed ds_configs/zero3_cpu_offload.json &
 
 TRAIN_PID=$!
 
@@ -63,4 +88,4 @@ kill $GPU_LOG_PID
 kill $CPU_LOG_PID
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
-python scripts/analyze_memory.py ${SLURM_JOB_ID:-manual} --path "$SCRIPT_DIR"
+python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"
