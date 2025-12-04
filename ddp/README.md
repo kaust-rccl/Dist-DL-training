@@ -110,8 +110,39 @@ size.
 
 ### Directory Structure
 
-### Requirements
-
+```text
+ddp/
+├── experiments
+│   ├── baseline
+│   │   └── baseline.slurm
+│   ├── multi_gpu
+│   │   ├── 2_gpus
+│   │   │   └── multi_gpu.slurm
+│   │   ├── 4_gpus
+│   │   │   └── multi_gpu.slurm
+│   │   └── 8_gpus
+│   │       └── multi_gpu.slurm
+│   └── multi_node
+│       ├── 2_nodes
+│       │   └── multi_node.slurm
+│       ├── 4_nodes
+│       │   └── multi_node.slurm
+│       └── 8_nodes
+│           └── multi_node.slurm
+├── interactive
+│   ├── img_classifier_ddp.ipynb
+│   ├── img_classifier_vanilla.ipynb
+│   └── interactive.slurm
+├── README.md
+├── scaling
+│   ├── multi_GPU.py
+│   ├── multi_GPU.slurm
+│   ├── single_GPU.py
+│   └── single_GPU.slurm
+└── scripts
+    ├── analyze_memory.py
+    └── train.p
+```
 ### Environment Setup
 
 ### Dataset: TinyImageNet
