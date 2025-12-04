@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=4-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
+#SBATCH --job-name=2ZO-8G4N                                      # SLURM job name
 #SBATCH --nodes=4                                                # Number of nodes to allocate
-#SBATCH --ntasks=8                                               # Number of tasks
-#SBATCH --ntasks-per-node=2                                      # 2 tasks (process) per node
-#SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
-#SBATCH --gpus-per-node=2                                       # 2 GPU per node
+#SBATCH --ntasks=4                                               # Number of tasks
+#SBATCH --ntasks-per-node=1                                      # 2 tasks (process) per node
+#SBATCH --cpus-per-task=8                                        # Number of CPU cores per task
+#SBATCH --gpus-per-node=2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
 #SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
@@ -25,8 +25,14 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
-
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR"
+
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
 
 # ------------------------------
 # Environment Setup

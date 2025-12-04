@@ -284,6 +284,23 @@ After your SLURM job completes, the following artifacts will be generated:
 | **GPU Memory Log**   | `gpu_memory/gpu_memory_log_<job_id>.csv` | Periodic memory usage from `nvidia-smi`                        |
 | **CPU Memory Log**   | `cpu_memory/cpu_memory_log_<job_id>.txt` | RAM usage sampled over time using `psrecord`                   |
 
+#### Job Naming Convention
+
+All ZeRO experiments follow the naming pattern:
+
+**`xZ-xGxN`**
+
+Where:
+
+- **xZ** → DeepSpeed ZeRO Stage (1Z = ZeRO-1, 2Z = ZeRO-2, 3Z = ZeRO-3)
+- **xZO** → The added O is for offloading
+- **xG** → Number of total GPUs   
+- **xN** → Number of nodes used in the job
+
+**Example:**  
+`1Z-1G1N` → ZeRO-1 using **1 GPU** on **1 node**  
+`2Z-4G2N` → ZeRO-2 using **4 GPUs total** so, **2 GPUs per node**  
+`3Z-8G4N` → ZeRO-3 using **8 GPUs total** so, **2 GPUs per node**
 ---
 
 ## Exercise: Run the Baseline Training & Fill Evaluation Summary Table
@@ -400,10 +417,10 @@ DeepSpeed still initializes and applies all runtime optimizations through its in
 `Trainer` API.
 
 To ensure DeepSpeed is activated, pass the config file using the `--deepspeed` argument when launching the script:
-
 ```bash
-python scripts/train.py --deepspeed ./<ds_config>.json
+python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ./<ds_config>.json
 ```
+>You need an explicit `rdzv endpoint` so all distributed processes can find each other and to avoid port collisions with the default address (29500) when multiple runs launch simultaneously.
 
 ### Modification to `TrainingArguments`
 
@@ -604,7 +621,7 @@ psrecord:
 1. **Background the Training job:**
     ```
    # Launch the training script with DeepSpeed in the background
-   python scripts/train.py --deepspeed <ds_config>.json &
+   python -m torch.distributed.run --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed <ds_config>.json &
    # Capture the PID of the DeepSpeed training process for later monitoring or cleanup
    TRAIN_PID=$!
    ```
@@ -717,8 +734,6 @@ the [SLURM](experiments/deepspeed-single-gpu/zero_0/deepspeed_zero0.slurm) scrip
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')    # Dynamically find a free TCP port on the current node to use as the rendezvous port.
 export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
-export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
-export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
 ```
 
 These environment variables configure distributed training manually.
@@ -734,7 +749,7 @@ These environment variables configure distributed training manually.
 #### Step 3: Use the Python Launcher with
 
 ```commandline
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
+python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  --rdzv_endpoint=$master_ip:$master_port scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
 ```
 
 This command launches **distributed training** on **all GPUs in the current node**, using PyTorch’s recommended

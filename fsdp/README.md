@@ -186,6 +186,27 @@ After the run finishes, you'll find:
 
 - SLURM log files in the `log` directory or as specified by --output
 
+### Job Naming Convention
+
+FSDP experiments follow the naming pattern:
+
+**`F-B/C-xGxN`**
+
+Where:
+
+- **F** → Fully Sharded Data Parallel (PyTorch FSDP)
+
+- **B/C** → B for Bloom, or C for custom-model
+  - A **W** added to the C for custom model indicates weak scaling. 
+
+- **xG** → Number of GPUs in total  
+- **xN** → Number of nodes
+
+**Example:**  
+`F-B-1G1N` → FSDP, for fine-tuning Bloom, on **1 GPU** on **1 node**  
+`F-C-4G1N` → FSDP, for custom model fine-tuning, using **4 GPUs** on **1 node**  
+`F-CW-4G2N` → FSDP, for weak-scaling custom model fine-tuning, across **2 nodes**, each with 2 GPUs, so **4 GPUs in total**.
+
 ##  Exercise: Run the Baseline Training & Fill Evaluation Summary Table
 
 As part of this workshop, your task is to **run the baseline fine-tuning experiment** and **recreate the performance summary table** using your own training logs.
@@ -435,7 +456,7 @@ These environment variables configure distributed training manually.
 		srun --nodes=1 --ntasks=1 --gpus=$WORLD_SIZE \
 		     python -m torch.distributed.launch --use_env \
 		       --nproc_per_node=$WORLD_SIZE \
-		       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+		       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 		       multi_gpu.py
 
 **Explanation:**
@@ -641,7 +662,7 @@ Start one training process per node using `srun` and `torch.distributed.launch`:
 	         python -m torch.distributed.launch --use_env \
 	            --nproc_per_node=1 \
 	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	            multi_node.py &
 	done
 	wait
@@ -892,7 +913,7 @@ Configure distributed training:
 	srun --nodes=1 --ntasks=1 --gpus=2 \
 	     python -m torch.distributed.launch --use_env \
 	       --nproc_per_node=2 \
-	       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+	       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	       multi_gpu.py
 
 
@@ -1088,7 +1109,7 @@ Set environment and initiate multi-node distributed training:
 	         python -m torch.distributed.launch --use_env \
 	            --nproc_per_node=1 \
 	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	            multi_node.py &
 	done
 	wait
