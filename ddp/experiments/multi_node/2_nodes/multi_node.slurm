@@ -28,15 +28,6 @@ GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/${SLURM_JOB_ID}"
 
 mkdir -p "$GPU_LOG_DIR"
 
-# ------------------------------
-# GPU Memory Logging
-# ------------------------------
-nvidia-smi \
-  --query-gpu=timestamp,index,name,memory.used,memory.total \
-  --format=csv,nounits -l 5 > "$GPU_LOG_DIR/gpu_memory_log.csv" &
-GPU_LOG_PID=$!
-
-
 # Getting the node names
 nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
 nodes_array=($nodes)
@@ -60,10 +51,18 @@ export OMP_NUM_THREADS=1
 for (( i=0; i< ${SLURM_NNODES}; i++ ))
 do
      srun -n 1 -N 1 -c ${SLURM_CPUS_PER_TASK} -w ${nodes_array[i]} --gpus=${SLURM_GPUS_PER_NODE}  \
-      python -m torch.distributed.launch --use_env \
-     --nproc_per_node=${SLURM_GPUS_PER_NODE} --nnodes=${SLURM_NNODES} --node_rank=${i} \
-     --master_addr=${master_ip} --master_port=${master_port} \
-     $SCRIPTS_DIR/train.py --epochs=3   --lr=0.001 --num-workers=${CPUS_PER_TASK} --batch-size=512 &
+     bash -c "
+        hostname=\$(hostname)                                                      # Capture this node's hostname
+        nvidia-smi --query-gpu=timestamp,index,name,memory.used,memory.total \
+                   --format=csv,nounits -l 5 \
+                   > \"$GPU_LOG_DIR/gpu_memory_log_\${hostname}.csv\" &                # Start GPU memory logging in background
+        MEMORY_LOG_PID=\$!
+
+        python -m torch.distributed.launch --use_env \
+       --nproc_per_node=${SLURM_GPUS_PER_NODE} --nnodes=${SLURM_NNODES} --node_rank=${i} \
+       --master_addr=${master_ip} --master_port=${master_port} \
+       $SCRIPTS_DIR/train.py --epochs=3   --lr=0.001 --num-workers=${CPUS_PER_TASK} --batch-size=512
+       " &
      SRUN_PIDS+=($!)
 done
 
