@@ -32,6 +32,8 @@ args = parser.parse_args()
 # It will be used by HuggingFace's `Trainer` class.
 
 TRAINING_ARGS = TrainingArguments(
+    report_to="wandb",
+
     output_dir="./bloom-qa-finetuned",  # Path to save checkpoints, logs, and final model
 
     # Evaluation Strategy: Run evaluation at the end of each epoch
