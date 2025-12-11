@@ -3,6 +3,8 @@
 # ============================================
 
 import argparse
+import os
+
 from transformers import TrainingArguments
 
 # --------------------------------------------
@@ -30,8 +32,11 @@ args = parser.parse_args()
 # --------------------------------------------
 # This object defines all hyperparameters and runtime settings for training.
 # It will be used by HuggingFace's `Trainer` class.
+EXPERIMENT_NAME = os.getenv("EXPERIMENT", "default_experiment")
 
 TRAINING_ARGS = TrainingArguments(
+    run_name=EXPERIMENT_NAME,
+
     report_to="wandb",
 
     output_dir="./bloom-qa-finetuned",  # Path to save checkpoints, logs, and final model

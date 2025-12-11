@@ -27,7 +27,7 @@ CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
 export EXPERIMENT_NAME="Deepspeed_Baseline"
-export WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d2"
+export WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d28d"
 
 
 # Setup Wandb online logging
