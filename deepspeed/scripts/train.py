@@ -37,12 +37,12 @@ model, tokenizer = load_model()
 import os
 
 # Define the base number of samples **per GPU**
-base_size = 500
+base_size = 5000
 
 # Detect number of GPUs (DeepSpeed / SLURM will set WORLD_SIZE)
 #    Fallback to 1 ifWORLD_SIZE is not set
-num_gpus = int(os.environ.get("WORLD_SIZE", 1))
-
+# num_gpus = int(os.environ.get("WORLD_SIZE", 1))
+num_gpus=1 # for the sake of strong scaling
 # Compute total subset size = base_size × num_gpus
 subset_size = base_size * num_gpus
 

@@ -1,0 +1,39 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+echo "====== DeepSpeed Experiments Batch Submission ======"
+echo "Root directory: $ROOT_DIR"
+echo "===================================================="
+
+# Find all slurm files in all subdirectories
+SLURM_SCRIPTS=$(find "$ROOT_DIR" -type f -name "*.slurm" | sort)
+
+if [[ -z "$SLURM_SCRIPTS" ]]; then
+    echo "No .slurm files found. Exiting."
+    exit 1
+fi
+
+echo "Submitting the following jobs:"
+echo "----------------------------------------------------"
+echo "$SLURM_SCRIPTS"
+echo "----------------------------------------------------"
+
+for script in $SLURM_SCRIPTS; do
+    echo ""
+    echo "Submitting: $script"
+    JOB_ID=$(sbatch "$script" 2>&1)
+
+    # If sbatch fails, print error but continue
+    if [[ $? -ne 0 ]]; then
+        echo "❌ Failed to submit: $script"
+        echo "Reason: $JOB_ID"
+        continue
+    fi
+
+    echo "✔ Submitted: $JOB_ID"
+done
+
+echo ""
+echo "====== All sbatch submissions attempted ======"

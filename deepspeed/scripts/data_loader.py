@@ -9,7 +9,7 @@ from transformers import AutoTokenizer
 # Step 1: Define the Pretrained Model Name
 # --------------------------------------------
 # This model checkpoint is used to load the appropriate tokenizer
-MODEL_NAME = "bigscience/bloom-560m"
+MODEL_NAME = "bigscience/bloom-1b7"
 
 
 # --------------------------------------------

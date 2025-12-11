@@ -34,6 +34,18 @@ args = parser.parse_args()
 # It will be used by HuggingFace's `Trainer` class.
 EXPERIMENT_NAME = os.getenv("EXPERIMENT", "default_experiment")
 
+WORLD_SIZE = int(os.environ.get("WORLD_SIZE", "1"))  # set by torchrun/deepspeed
+TARGET_GBS = 16  # from your 1-GPU baseline
+
+# Choose a per-device batch you *want* to try
+base_per_device_bs = 4
+
+# Compute gradient_accumulation_steps to hit TARGET_GBS
+grad_acc_steps = max(
+    1,
+    TARGET_GBS // (WORLD_SIZE * base_per_device_bs)
+)
+
 TRAINING_ARGS = TrainingArguments(
     run_name=EXPERIMENT_NAME,
 
@@ -48,11 +60,11 @@ TRAINING_ARGS = TrainingArguments(
     save_strategy="epoch",
 
     # Per-device batch sizes during training and evaluation
-    per_device_train_batch_size=4,
-    per_device_eval_batch_size=4,
+    per_device_train_batch_size=base_per_device_bs,
+    per_device_eval_batch_size=base_per_device_bs,
 
     # Accumulate gradients over 4 steps to simulate a larger batch size
-    gradient_accumulation_steps=4,
+    gradient_accumulation_steps=grad_acc_steps,
 
     # Number of full passes over the training dataset
     num_train_epochs=3,

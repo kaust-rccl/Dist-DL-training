@@ -25,6 +25,16 @@ LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+export EXPERIMENT_NAME="Deepspeed_4G_Zero2"
+export WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d28d"
+
+# Setup Wandb online logging
+export WANDB_MODE=online
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_DIR="$LOG_OUT_DIR/$EXPERIMENT/wandb_runs"
+mkdir -p $WANDB_DIR
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 
 export HF_HOME=/ibex/user/$USER/.hf
 export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
@@ -59,7 +69,7 @@ export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # T
 python -m torch.distributed.run \
  --nproc_per_node="$SLURM_GPUS_ON_NODE" \
  --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
- scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
+ scripts/train.py --deepspeed ds_configs/zero2.json &
 
 TRAIN_PID=$!
 
@@ -76,6 +86,9 @@ CPU_LOG_PID=$!
 wait $TRAIN_PID
 kill $GPU_LOG_PID
 kill $CPU_LOG_PID
+
+# Wandb API key for later sync (online mode)
+export WANDB_API_KEY=${WANDB_API_KEY}
 
 echo "Analyzing memory logs for job ${SLURM_JOB_ID:-manual}"
 python scripts/analyze_memory.py "${SLURM_JOB_ID:-manual}" --path "$SCRIPT_DIR"

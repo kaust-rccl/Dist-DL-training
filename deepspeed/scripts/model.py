@@ -9,7 +9,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # --------------------------------------------
 
 # Pre-trained model name from Hugging Face Hub
-MODEL_NAME = "bigscience/bloom-560m"
+MODEL_NAME = "bigscience/bloom-1b7"
 
 # Local directory to save fine-tuned model and tokenizer
 SAVE_DIR = "./bloom-finetuned"
