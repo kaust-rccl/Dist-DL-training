@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=8                                    # Number of CPUs allocated per task
 #SBATCH --gpus=2                                             # Request 2 GPU
 #SBATCH --gpus-per-node=2                                    # 2 GPUs per node
-#SBATCH --mem=32G                                            # Request 32 GB of system memory
+#SBATCH --mem=64G                                            # Request 32 GB of system memory
 #SBATCH --constraint=v100                                    # Request specific GPU type (V100)
-#SBATCH --time=01:00:00                                      # Maximum runtime (HH:MM:SS)
+#SBATCH --time=05:00:00                                      # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                               # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
@@ -27,6 +27,7 @@ CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
 export EXPERIMENT_NAME="Deepspeed_2G_Zero2"
+export WANDB_PROJECT="deepspeed-finetuning"
 export WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d28d"
 
 # Setup Wandb online logging

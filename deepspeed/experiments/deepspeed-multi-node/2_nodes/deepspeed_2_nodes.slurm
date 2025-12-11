@@ -5,9 +5,9 @@
 #SBATCH --ntasks-per-node=1                                      # 2 tasks (process) per node
 #SBATCH --cpus-per-task=8                                       # Number of CPU cores per task
 #SBATCH --gpus-per-node=2                                        # 2 GPU per node
-#SBATCH --mem=32G                                                # Memory per node
+#SBATCH --mem=64G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
-#SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
+#SBATCH --time=05:00:00                                          # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
 
 # ------------------------------

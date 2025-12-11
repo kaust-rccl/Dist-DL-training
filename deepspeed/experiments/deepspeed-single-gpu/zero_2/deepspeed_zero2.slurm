@@ -5,9 +5,9 @@
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task
 #SBATCH --gpus=1                               # Request 1 GPU
 #SBATCH --gpus-per-node=1                      # GPUs per node
-#SBATCH --mem=32G                              # Request 32 GB of system memory
+#SBATCH --mem=64G                              # Request 32 GB of system memory
 #SBATCH --constraint=v100                      # Request specific GPU type (V100)
-#SBATCH --time=01:00:00                        # Maximum runtime (HH:MM:SS)
+#SBATCH --time=05:00:00                        # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                 # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
