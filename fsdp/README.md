@@ -406,12 +406,7 @@ This restricts the training processes to the specified GPUs.
 In your training script (`multi_gpu.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
-    "mixed_precision": {
-            "enabled": True,
-            "param_dtype": torch.float16,
-            "reduce_dtype": torch.float32,
-            "buffer_dtype": torch.float16,
-        },
+   
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
@@ -585,12 +580,7 @@ To allocate resources across multiple nodes, include the following directives in
 In your training script (`multi_node.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
-    "mixed_precision": {
-            "enabled": True,
-            "param_dtype": torch.float16,
-            "reduce_dtype": torch.float32,
-            "buffer_dtype": torch.float16,
-        },
+   
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
@@ -867,12 +857,7 @@ Key configurations:
 In your training script (`multi_gpu.py`), FSDP configuration is set as:
 
 	fsdp_cfg = {
-    "mixed_precision": {
-            "enabled": True,
-            "param_dtype": torch.float16,
-            "reduce_dtype": torch.float32,
-            "buffer_dtype": torch.float16,
-        },
+   
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,

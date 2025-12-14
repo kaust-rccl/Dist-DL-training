@@ -17,7 +17,7 @@ export LEARNING_RATE=5e-5
 export WEIGHT_DECAY=0.01
 export GRAD_ACC=4
 export FP16=False
-export BF16=False
+export BF16=True
 
 # ── Model architecture ───────────────────────────────
 export VOCAB_SIZE=50000          # ≈ tokenizer.vocab_size
