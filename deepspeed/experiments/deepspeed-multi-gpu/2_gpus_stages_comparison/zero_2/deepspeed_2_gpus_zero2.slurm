@@ -27,8 +27,8 @@ CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
 export EXPERIMENT_NAME="Deepspeed_2G_Zero2"
-export WANDB_PROJECT="deepspeed-finetuning"
-export WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d28d"
+export WANDB_PROJECT="deepspeed-finetuning"export
+WANDB_API_KEY="543b7e544b7135b5a155d75b41180fbf7046d28d"
 
 # Setup Wandb online logging
 export WANDB_MODE=online
@@ -37,6 +37,7 @@ export WANDB_DIR="$LOG_OUT_DIR/$EXPERIMENT/wandb_runs"
 mkdir -p $WANDB_DIR
 export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_PROJECT="deepspeed-finetuning"
 
 export HF_HOME=/ibex/user/$USER/.hf
 export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers

@@ -7,7 +7,7 @@ export LOG_DIR="$PWD/logs"
 export WANDB_API_KEY="your_wandb_api_key"
 
 
-export MODEL_NAME="bigscience/bloom-560m"
+export MODEL_NAME="bigscience/bloom-1b7"
 export OUTPUT_DIR="outputs/${EXPERIMENT_NAME}"
 export MAX_LENGTH=512
 export TRAIN_SIZE=400

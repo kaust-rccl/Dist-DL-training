@@ -24,7 +24,7 @@ export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
 export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
-export WANDB_API_KEY=${WANDB_API_KEY}
+export WANDB_PROJECT="fsdp-finetuning"export WANDB_API_KEY=${WANDB_API_KEY}
 
 # Export caching to user space
 export HF_HOME=/ibex/user/$USER/.hf

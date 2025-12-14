@@ -37,6 +37,7 @@ export WANDB_DIR="$LOG_OUT_DIR/$EXPERIMENT/wandb_runs"
 mkdir -p $WANDB_DIR
 export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_PROJECT="deepspeed-finetuning"
 
 export HF_HOME=/ibex/user/$USER/.hf
 export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
