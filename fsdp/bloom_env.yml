@@ -52,7 +52,7 @@ dependencies:
       - gcsfs==2024.12.0
       - gitdb==4.0.12
       - gitpython==3.1.44
-      - google-api-core==2.24.2
+      - google-api-core
       - google-auth==2.38.0
       - google-auth-oauthlib==0.4.6
       - google-cloud-core==2.4.3
@@ -60,7 +60,7 @@ dependencies:
       - google-crc32c==1.7.1
       - google-pasta==0.2.0
       - google-resumable-media==2.7.2
-      - googleapis-common-protos==1.69.2
+      - googleapis-common-protos
       - grpcio==1.71.0
       - gviz-api==1.10.0
       - h5py==3.13.0
@@ -100,8 +100,8 @@ dependencies:
       - pandas==2.2.3
       - platformdirs==4.3.7
       - propcache==0.3.0
-      - proto-plus==1.26.1
-      - protobuf==3.19.6
+      - proto-plus
+      - protobuf
       - psutil==7.0.0
       - pyarrow==19.0.1
       - pyasn1==0.6.1
@@ -123,7 +123,7 @@ dependencies:
       - six==1.17.0
       - smmap==5.0.2
       - sympy==1.13.1
-      - tensorboard==2.10.1
+      - tensorboard
       - tensorboard-data-server==0.6.1
       - tensorboard-plugin-profile==2.5.0
       - tensorboard-plugin-wit==1.8.1
@@ -145,4 +145,3 @@ dependencies:
       - xxhash==3.5.0
       - yarl==1.18.3
       - zipp==3.21.0
-prefix: /ibex/user/x_mohameta/conda-environments/bloom_env
