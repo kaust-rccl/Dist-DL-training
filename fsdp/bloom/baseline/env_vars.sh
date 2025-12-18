@@ -1,11 +1,12 @@
 # Conda setup
-export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
+export CONDA_SH_PATH="/ibex/user/${USER}/miniconda3/etc/profile.d/conda.sh"
 export CONDA_ENV="bloom_env"
 
 # Wandb/offline‐run settings
 export EXPERIMENT_NAME="BLOOM_Baseline"
 export LOG_DIR="logs/"
 export WANDB_API_KEY="your_wandb_api_key"
+
 
 
 export MODEL_NAME="bigscience/bloom-560m"
@@ -20,3 +21,6 @@ export WEIGHT_DECAY=0.01
 export GRAD_ACC=4
 export FP16=True
 export BF16=False
+
+
+
