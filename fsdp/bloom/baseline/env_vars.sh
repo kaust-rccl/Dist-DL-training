@@ -1,11 +1,11 @@
 # Conda setup
-export CONDA_SH_PATH="/ibex/user/${USER}/miniconda3/etc/profile.d/conda.sh"
+export CONDA_SH_PATH="/ibex/user/${USER}/mambaforge/etc/profile.d/conda.sh"
 export CONDA_ENV="bloom_env"
 
 # Wandb/offline‐run settings
 export EXPERIMENT_NAME="BLOOM_Baseline"
 export LOG_DIR="logs/"
-export WANDB_API_KEY="your_wandb_api_key"
+export WANDB_API_KEY="your_wandb_api_key_here"
 
 
 
