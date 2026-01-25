@@ -42,12 +42,12 @@ You will fine-tune the **BLOOM-560 M** language model on a subset of **SQuAD v1.
 It provides easy-to-use tools to **download, train, fine-tune, and deploy** state-of-the-art models with just a few lines of code.
 ### 🔧 Key Components You'll Use
 
-| Component    | What It Does                                                                 |
-|--------------|-------------------------------------------------------------------------------|
-|`transformers` | Python library for accessing thousands of pre-trained models across NLP, vision, and audio tasks. |
-|`datasets`    | Library for easy loading, sharing, and preprocessing of public datasets like SQuAD, IMDB, and more. |
-|`Trainer` API | High-level training interface to handle training, evaluation, and checkpointing with minimal code. |
-| Model Hub    | Online platform for hosting, sharing, and downloading models — all ready to use. |
+| Component      | What It Does                                                                                        |
+|----------------|-----------------------------------------------------------------------------------------------------|
+| `transformers` | Python library for accessing thousands of pre-trained models across NLP, vision, and audio tasks.   |
+| `datasets`     | Library for easy loading, sharing, and preprocessing of public datasets like SQuAD, IMDB, and more. |
+| `Trainer` API  | High-level training interface to handle training, evaluation, and checkpointing with minimal code.  |
+| Model Hub      | Online platform for hosting, sharing, and downloading models — all ready to use.                    |
 
 ---
 In this workshop, you’ll:
@@ -92,8 +92,14 @@ conda activate bloom_env
 	print("PyTorch version :", torch.__version__, " |  CUDA:", torch.version.cuda)
 	print("System          :", platform.platform())
 	PY
-----------------------------------
 You should see `CUDA available : True`.
+
+**Step 3 - Set up your Weights & Biases API key**
+```commandline
+./wandb_update.sh "<your_api_key>"
+```
+---
+
 # Baseline: BLOOM Fine-tuning without FSDP:
 
 ## Fine-Tuning Setup
@@ -157,11 +163,9 @@ Instead of writing your own training loop with forward(), backward(), optimizer 
     
 -   Activates `bloom_env`.
     
--   Sets WandB to offline mode and chooses a run name via `$EXPERIMENT_NAME`.
+-   Sets WandB to online mode and chooses a run name via `$EXPERIMENT_NAME`.
     
 -   Runs `python baseline.py`.
-    
--   After the job it flips WandB back to online and syncs cached runs.
 
 ### Bringing It All Together: Running the Baseline Fine-Tuning Experiment
 
@@ -182,6 +186,27 @@ After the run finishes, you'll find:
 
 - SLURM log files in the `log` directory or as specified by --output
 
+### Job Naming Convention
+
+FSDP experiments follow the naming pattern:
+
+**`F-B/C-xGxN`**
+
+Where:
+
+- **F** → Fully Sharded Data Parallel (PyTorch FSDP)
+
+- **B/C** → B for Bloom, or C for custom-model
+  - A **W** added to the C for custom model indicates weak scaling. 
+
+- **xG** → Number of GPUs in total  
+- **xN** → Number of nodes
+
+**Example:**  
+`F-B-1G1N` → FSDP, for fine-tuning Bloom, on **1 GPU** on **1 node**  
+`F-C-4G1N` → FSDP, for custom model fine-tuning, using **4 GPUs** on **1 node**  
+`F-CW-4G2N` → FSDP, for weak-scaling custom model fine-tuning, across **2 nodes**, each with 2 GPUs, so **4 GPUs in total**.
+
 ##  Exercise: Run the Baseline Training & Fill Evaluation Summary Table
 
 As part of this workshop, your task is to **run the baseline fine-tuning experiment** and **recreate the performance summary table** using your own training logs.
@@ -191,47 +216,30 @@ This exercise helps you develop a habit of tracking key metrics like training lo
 ## Part 1: Run the Baseline Fine-Tuning Job
 ### Steps:
 
- 1. Navigate to the baseline directory:  
+1. Navigate to the baseline directory:  
 
-	```commandline
-	cd bloom/baseline
-	```
- 2. **Modify `env_vars.sh`:**
+   ```commandline
+   cd bloom/baseline
+   ```
+2. Submit the SLURM job:
 
-	Ensure the following variables are correctly set:
+   ```commandline
+   sbatch baseline.slurm
+   ```
+   This script will:
 
-	-   **`WANDB_API_KEY`**: Replace with your personal WandB API key.
+   -   Activate the `bloom_env` Conda environment.
 	    
-	-   **`EXPERIMENT_NAME`**: Set a descriptive name for the experiment.
+   -   Launch `baseline.py` with the specified configurations.
 	    
-	-   **`LOG_DIR`**: Confirm the path exists and is writable.
-    
+   -   Log outputs to the designated `LOG_DIR`.
 
-	Example:
-	```commandline
-	export WANDB_API_KEY="your_actual_wandb_key"
-	export EXPERIMENT_NAME="BLOOM_Baseline"
-	export LOG_DIR="/ibex/user/your_username/Dist-DL-training/fsdp/bloom/baseline/logs"
-	```
- 3. Submit the SLURM job:
-
-	```commandline
-	sbatch baseline.slurm
-	```
-	This script will:
-
-	-   Activate the `bloom_env` Conda environment.
-	    
-	-   Launch `baseline.py` with the specified configurations.
-	    
-	-   Log outputs to the designated `LOG_DIR`.
-
- 4. Monitor the job: 
-	 After submission, monitor the job's status:
- 	```commandline
-	squeue --me
-	```
-	Once completed, proceed to the next step.
+3. Monitor the job: 
+    After submission, monitor the job's status:
+    ```commandline
+   squeue --me
+   ```
+   Once completed, proceed to the next step.
 	
 ## 📄 Output Artifacts
 
@@ -260,22 +268,19 @@ Upon job completion, expect the following artifacts:
 	{'eval_loss': 1.7790, 'eval_runtime': 1.2682, 'eval_samples_per_second': 39.427, ... 'epoch': 2.93}
 	{'train_runtime': 125.2999, 'train_samples_per_second': 11.971, 'train_steps_per_second': 0.742, 'train_loss': 0.7039, 'epoch': 2.93}
 	```
-3. Populate the Results Table:
-    | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
-    |--------------------------------|-----------------------------------------------------------|----------------|
-    | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
-    | Eval Loss (Epoch 1)            | First `eval_loss` where `'epoch': 1.0`                    |                |
-    | Eval Loss (Epoch 2)            | `eval_loss` where `'epoch': 2.0`                          |                |
-    | Eval Loss (Epoch 3)            | Final `eval_loss` (e.g. where `'epoch': 3.0`)            |                |
-    | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
-    | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
-    | Steps per Epoch                | From the progress bar.         |                |
-    | Memory Allocated (MB)           | _From logs_     					|
-	| GPU Utilization (%)             | _From logs_   
-	_Note_: Replace the placeholders in the "Your Value" column with the actual values extracted from your logs.
+ 3. Populate the Results Table:
+    
+     | **Metric**                     | **Log Location & Extraction**                             | **Your Value** |
+     |--------------------------------|-----------------------------------------------------------|----------------|
+     | Train Loss (Final)             | Last `train_loss` in `{'train_loss': ...}`                |                |
+     | Eval Loss (Epoch 5)            | Final `eval_loss` (e.g. where `'epoch': 4.93`)            |                |
+     | Training Speed (samples/sec)   | `train_samples_per_second` in the final summary           |                |
+     | Evaluation Speed (samples/sec) | `eval_samples_per_second` in any eval line (e.g. epoch 1) |                |
+     | Steps per Epoch                | From the progress bar.                                    |                |
+     | Peak Memory Allocated (MB)     | _From logs_     					                                     |                |
+     | Peak GPU Utilization (%)       | _From logs_                                               |                |
 
-
-
+4. _Note_: Replace the placeholders in the "Your Value" column with the actual values extracted from your logs.
 
 ## 📊 Monitoring and Results
 
@@ -361,35 +366,8 @@ Your project directory is organized as follows:
 For example, to use 2 gpus:
 
 	cd bloom/multi_gpu/2_gpus
-### 2. Configure Environment Variables
 
-Edit the `env_vars.sh` file to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="BLOOM_Multi_GPUS_2_GPUs"
-	export LOG_DIR="/path/to/multi_gpu/2_gpus/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export MODEL_NAME="bigscience/bloom-560m"
-	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=True
-	export BF16=False
-**Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the training job using the provided SLURM script:
 
@@ -428,6 +406,12 @@ This restricts the training processes to the specified GPUs.
 In your training script (`multi_gpu.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
@@ -435,7 +419,10 @@ In your training script (`multi_gpu.py`), FSDP is configured as follows:
 	}
 
 **Explanation of Parameters:**
-
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 -   `transformer_layer_cls_to_wrap`: Specifies the transformer layers to wrap with FSDP. In this case, `BloomBlock` layers. 
 	- Analysis of the Bloomz-560m architecture reveals that approximately **80%** of the total 560 million parameters are concentrated in the transformer layers (i.e. the BloomBlock layers).
     
@@ -469,7 +456,7 @@ These environment variables configure distributed training manually.
 		srun --nodes=1 --ntasks=1 --gpus=$WORLD_SIZE \
 		     python -m torch.distributed.launch --use_env \
 		       --nproc_per_node=$WORLD_SIZE \
-		       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+		       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 		       multi_gpu.py
 
 **Explanation:**
@@ -515,6 +502,7 @@ These environment variables configure distributed training manually.
 	
 ### 📋 Results Table
 Populate the following table with the metrics extracted from your experiments:
+
 |          Setup          | Total GPUs | Samples/s | Samples/s Scale Factor | Runtime (s) | Runtime Scale Factor | Loss | GPU Memory Allocated (GB) |
 |:-----------------------:|:----------:|:---------:|:----------------------:|:-----------:|:--------------------:|:----:|:-------------------------:|
 | Single Node, Single GPU |            |           |                        |             |                      |      |                           |
@@ -565,36 +553,7 @@ For example, to use 2 nodes:
 
 	cd bloom/multi_node/2_nodes
 
-### 2. Configure Environment Variables
-
-Edit the `env_vars.sh` file to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="BLOOM_Multi_Node_2_Nodes"
-	export LOG_DIR="/path/to/multi_node/2_nodes/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export MODEL_NAME="bigscience/bloom-560m"
-	export OUTPUT_DIR="/path/to/multi_node/2_nodes/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=True
-	export BF16=False
-
-**Note:** Replace `/path/to/` with your actual directory paths and `your_wandb_api_key` with your WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the training job using the provided SLURM script:
 
@@ -626,13 +585,23 @@ To allocate resources across multiple nodes, include the following directives in
 In your training script (`multi_node.py`), FSDP is configured as follows:
 
 	fsdp_cfg = {
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
 	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
 	    "sync_module_states": True
 	}
-**Explanation of Parameters:**
 
+**Explanation of Parameters:**
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 -   `transformer_layer_cls_to_wrap`: Specifies the transformer layers to wrap with FSDP. In this case, `BloomBlock` layers.
     
     -   Analysis of the Bloomz-560m architecture reveals that approximately **80%** of the total 560 million parameters are concentrated in the transformer layers (i.e., the BloomBlock layers).
@@ -693,7 +662,7 @@ Start one training process per node using `srun` and `torch.distributed.launch`:
 	         python -m torch.distributed.launch --use_env \
 	            --nproc_per_node=1 \
 	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	            multi_node.py &
 	done
 	wait
@@ -746,6 +715,7 @@ Start one training process per node using `srun` and `torch.distributed.launch`:
     
 ### 📋 Results Table
 Populate the following table with the metrics extracted from your experiments:
+
 |          Setup          | Total GPUs | Samples/s | Samples/s Scale Factor | Runtime (s) | Runtime Scale Factor | Loss | GPU Memory Allocated (GB) |
 |:-----------------------:|:----------:|:---------:|:----------------------:|:-----------:|:--------------------:|:----:|:-------------------------:|
 | Single Node|            |           |                        |             |                      |      |                           |
@@ -793,22 +763,17 @@ This document details the fine-tuning of a custom GPT-like model, implemented us
 
 ### Steps:
 
- 1.  Navigate to the single node directory:
+ 1. Navigate to the single node directory:
 
-		cd custom_model/single_node
+        cd custom_model/single_node
 
- 2.  Modify `env_vars.sh`:
-    
+ 2. Submit the SLURM job:
 
-		Ensure variables like `WANDB_API_KEY`, `EXPERIMENT_NAME`, `LOG_DIR`, and model parameters are correctly set.
+        sbatch single_node.slurm
 
- 3. Submit the SLURM job:
+ 3. Monitor the job:
 
-		sbatch single_node.slurm
-
- 4. Monitor the job:
-
-		squeue --me
+        squeue --me
 	
 ### Output Artifacts
 
@@ -867,42 +832,7 @@ Example, using 2 GPUs:
 
 	cd custom_model/multi_gpu/2_gpus
 
-### 2. Configure Environment Variables
-
-Edit `env_vars.sh` to set up your environment:
-
-	# Conda setup
-	export CONDA_SH_PATH="/path/to/miniforge/etc/profile.d/conda.sh"
-	export CONDA_ENV="bloom_env"
-
-	# WandB settings
-	export EXPERIMENT_NAME="Custom_Model_Multi_GPUS_2_GPUs"
-	export LOG_DIR="/path/to/multi_gpu/2_gpus/logs"
-	export WANDB_API_KEY="your_wandb_api_key"
-
-	# Model and training parameters
-	export OUTPUT_DIR="/path/to/multi_gpu/2_gpus/outputs/${EXPERIMENT_NAME}"
-	export MAX_LENGTH=512
-	export TRAIN_SIZE=500
-	export EVAL_SIZE=100
-	export NUM_EPOCHS=5
-	export BATCH_SIZE=1
-	export LEARNING_RATE=5e-5
-	export WEIGHT_DECAY=0.01
-	export GRAD_ACC=4
-	export FP16=True
-	export BF16=False
-
-	# Model architecture parameters
-	export VOCAB_SIZE=50000          # tokenizer vocabulary size
-	export HIDDEN_SIZE=2048          # embedding & transformer hidden size
-	export NUM_LAYERS=3              # transformer layers depth
-	export NUM_HEADS=16              # attention heads per layer
-	export FF_DIM=8192               # transformer feed-forward dimension
-	export SEQ_LENGTH=512            # max sequence length
-**Note:** Replace `/path/to/` and `your_wandb_api_key` with your actual paths and WandB API key.
-
-### 3. Submit the SLURM Job
+### 2. Submit the SLURM Job
 
 Submit the job using:
 
@@ -937,13 +867,23 @@ Key configurations:
 In your training script (`multi_gpu.py`), FSDP configuration is set as:
 
 	fsdp_cfg = {
-	    "transformer_layer_cls_to_wrap": ["torch.nn.modules.transformer.TransformerEncoderLayer"],
+    "mixed_precision": {
+            "enabled": True,
+            "param_dtype": torch.float16,
+            "reduce_dtype": torch.float32,
+            "buffer_dtype": torch.float16,
+        },
+	    "transformer_layer_cls_to_wrap": ["BloomBlock"],
 	    "backward_prefetch": "backward_post",
 	    "forward_prefetch": True,
-	    "sync_module_states": True,
+	    "sync_module_states": True
 	}
 
-### Explanation of Parameters:
+**Explanation of Parameters:**
+- `mixed_precision`: Enables mixed-precision training within FSDP.
+    
+  - Here, model **parameters** and **buffers** use `float16` while **gradient reductions** occur in `float32`, providing a balance between memory efficiency and numerical stability.
+  - Note: Pure `fp16` precision is not compatible with FSDP, as it can lead to instability and overflow during communication and gradient synchronization.
 
 -   **`transformer_layer_cls_to_wrap`**:
     
@@ -973,7 +913,7 @@ Configure distributed training:
 	srun --nodes=1 --ntasks=1 --gpus=2 \
 	     python -m torch.distributed.launch --use_env \
 	       --nproc_per_node=2 \
-	       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+	       --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	       multi_gpu.py
 
 
@@ -1169,7 +1109,7 @@ Set environment and initiate multi-node distributed training:
 	         python -m torch.distributed.launch --use_env \
 	            --nproc_per_node=1 \
 	            --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-	            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+	            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
 	            multi_node.py &
 	done
 	wait

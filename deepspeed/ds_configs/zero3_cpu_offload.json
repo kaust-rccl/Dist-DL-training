@@ -20,7 +20,8 @@
       "device": "cpu"
     },
     "offload_param": {
-      "device": "cpu"
+      "device": "cpu",
+      "pin_memory": true
     }
   }
 }

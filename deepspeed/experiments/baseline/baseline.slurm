@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=baseline-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=DS-BASE                     # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                             # Number of tasks
 #SBATCH --tasks-per-node=1                     # One task per node
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task
@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=1                      # GPUs per node
 #SBATCH --mem=32G                              # Request 32 GB of system memory
 #SBATCH --constraint=v100                      # Request specific GPU type (V100)
-#SBATCH --time=12:00:00                        # Maximum runtime (HH:MM:SS)
+#SBATCH --time=01:00:00                        # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                 # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
@@ -24,13 +24,19 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
-
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
+
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
 
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/x_mohameta/miniforge/etc/profile.d/conda.sh
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate deepspeed-finetune
 module load cuda/12.4.1
 

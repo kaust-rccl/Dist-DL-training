@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=4-nodes-zero0-deepspeed-bloom-finetune        # SLURM job name
+#SBATCH --job-name=2ZO-8G4N                                      # SLURM job name
 #SBATCH --nodes=4                                                # Number of nodes to allocate
 #SBATCH --ntasks=4                                               # Number of tasks
-#SBATCH --ntasks-per-node=1                                      # One task (process) per node
-#SBATCH --cpus-per-task=4                                        # Number of CPU cores per task
-#SBATCH --gres=gpu:v100:1                                        # 1 GPU per node
+#SBATCH --ntasks-per-node=1                                      # 2 tasks (process) per node
+#SBATCH --cpus-per-task=8                                        # Number of CPU cores per task
+#SBATCH --gpus-per-node=2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
 #SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
-#SBATCH --time=12:00:00                                          # Maximum runtime (HH:MM:SS)
+#SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
 
 # ------------------------------
@@ -25,13 +25,19 @@ EXPERIMENT_DIR="$SCRIPT_DIR"
 # Log directories (all adjacent to SLURM script)
 LOG_OUT_DIR="$EXPERIMENT_DIR/log"
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
-
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR"
+
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
 
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/x_mohameta/miniforge/etc/profile.d/conda.sh
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate deepspeed-finetune
 module load cuda/12.4.1
 
@@ -51,7 +57,6 @@ master_ip=$(srun -n1 -N1 -w ${head_node} hostname -I | cut -d " " -f2)  # Fetch 
 master_port=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')  # Find a free TCP port dynamically
 echo "Master endpoint: ${master_ip}:${master_port}"
 
-
 # ----------------------------
 # Launch one process per node
 # ----------------------------
@@ -69,10 +74,10 @@ for (( i=0; i<${SLURM_NNODES}; i++ )); do
 
         python -m torch.distributed.run \
             --nnodes=$SLURM_JOB_NUM_NODES \
-            --nproc_per_node=1 \
+            --nproc_per_node=$SLURM_GPUS_PER_NODE \
             --node_rank=$i \
             --rdzv_endpoint=$master_ip:$master_port \
-            scripts/train_multi_nodes.py --deepspeed $ROOT_DIR/ds_configs/zero0.json                           # Launch distributed training
+            scripts/train_multi_nodes.py --deepspeed $ROOT_DIR/ds_configs/zero2_cpu_offload_pinned_memory.json                           # Launch distributed training
     " &
 done
 

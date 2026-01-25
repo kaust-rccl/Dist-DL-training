@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=2-gpus-zero0-deepspeed-bloom-finetune     # Name of the job shown in SLURM queue
+#SBATCH --job-name=2ZO-2G1N                                  # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                                           # Number of tasks
 #SBATCH --tasks-per-node=1                                   # One task per node
-#SBATCH --cpus-per-task=4                                    # Number of CPUs allocated per task
+#SBATCH --cpus-per-task=8                                    # Number of CPUs allocated per task
 #SBATCH --gpus=2                                             # Request 2 GPU
 #SBATCH --gpus-per-node=2                                    # 2 GPUs per node
 #SBATCH --mem=32G                                            # Request 32 GB of system memory
 #SBATCH --constraint=v100                                    # Request specific GPU type (V100)
-#SBATCH --time=12:00:00                                      # Maximum runtime (HH:MM:SS)
+#SBATCH --time=01:00:00                                      # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                               # Redirect SLURM .out log to log/ directory
 
 # ------------------------------
@@ -26,10 +26,17 @@ GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/$JOB_ID"
 CPU_LOG_DIR="$EXPERIMENT_DIR/cpu_memory/$JOB_ID"
 mkdir -p "$LOG_OUT_DIR" "$GPU_LOG_DIR" "$CPU_LOG_DIR"
 
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/x_mohameta/miniforge/etc/profile.d/conda.sh
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate deepspeed-finetune
 module load cuda/12.4.1
 
@@ -45,14 +52,15 @@ GPU_LOG_PID=$!
 export MASTER_ADDR=$(scontrol show hostnames $SLURM_JOB_NODELIST | head -n 1)  # Hostname or IP of the master node for NCCL initialization
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')                                                      # Rendezvous port (if 9999 is in use, try another such as 6000 or 29500)
 export WORLD_SIZE=$SLURM_GPUS_ON_NODE                                        # Total number of GPUs being used on this node
-export RANK=0                                                                 # Global rank of this process (0 for single-node jobs)
-export LOCAL_RANK=0                                                           # Local GPU index for this process (0–N-1)
 
 
 # ------------------------------
 # Launch Training
 # ------------------------------
-python -m torch.distributed.run --nproc_per_node=$SLURM_GPUS_ON_NODE  scripts/train.py --deepspeed ds_configs/zero0.json &
+python -m torch.distributed.run \
+ --nproc_per_node="$SLURM_GPUS_ON_NODE" \
+ --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
+ scripts/train.py --deepspeed ds_configs/zero2_cpu_offload_pinned_memory.json &
 
 TRAIN_PID=$!
 

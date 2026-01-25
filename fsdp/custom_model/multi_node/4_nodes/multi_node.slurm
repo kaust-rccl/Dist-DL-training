@@ -1,32 +1,39 @@
 #!/bin/bash
-#SBATCH --job-name=multi_node_custom_4                 
-#SBATCH --output=logs/multi_node_custom_4_%j.out                   # Stdout file
-#SBATCH --error=logs/multi_node_custom_4_%j.err                    # Stderr file
-#SBATCH --gpus=32
-#SBATCH --gpus-per-node=8
+#SBATCH --job-name=F-C-8G4N
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --gpus=8
+#SBATCH --gpus-per-node=2
 #SBATCH --ntasks=4
 #SBATCH --tasks-per-node=1
-#SBATCH --constraint=v100,cpu_intel_platinum_8260,gpu_ai          
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --constraint=v100
+#SBATCH --cpus-per-task=8		           # CPU cores per process
 #SBATCH --time=00:30:00                            # HH:MM:SS
-#SBATCH --mem=0		                           # Memory per node
+#SBATCH --mem=64G	                           # Memory per node
 
 source env_vars.sh
 
 # Activate environment
-source ${CONDA_SH_PATH}
+source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
 conda activate ${CONDA_ENV}
 
 export CUDA_VISIBLE_DEVICES=0
 
-# Wandb offline logging
-export WANDB_MODE=offline
-export EXPERIMENT="${EXPERIMENT_NAME}"
+# Wandb online logging
+export WANDB_MODE=online
+export EXPERIMENT="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_DIR=${LOG_DIR}/$EXPERIMENT/wandb_runs
 mkdir -p $WANDB_DIR
-export WANDB_RUN_ID=${EXPERIMENT_NAME}
-export WANDB_NAME=${EXPERIMENT_NAME}
+export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
+export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_API_KEY=${WANDB_API_KEY}
+
+# Export caching to user space
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
 
 module purge
 module load cuda/11.8 nccl/2.17.1-cuda11.8 openmpi/4.1.4/gnu11.2.1-cuda11.8
@@ -81,13 +88,13 @@ export OMP_NUM_THREADS=1
 
 for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
     srun --nodes=1 --ntasks=1 \
-         --gpus=1 \
+         --gpus=${SLURM_GPUS_PER_NODE} \
          --cpus-per-task=${SLURM_CPUS_PER_TASK} \
          -w ${nodes_array[$i]} \
          python -m torch.distributed.launch --use_env \
-            --nproc_per_node=1 \
+            --nproc_per_node=${SLURM_GPUS_PER_NODE} \
             --nnodes=${SLURM_JOB_NUM_NODES} --node_rank=${i} \
-            --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+            --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} \
             multi_node.py &
 done
 wait
