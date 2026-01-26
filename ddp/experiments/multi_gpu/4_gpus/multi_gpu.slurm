@@ -8,7 +8,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=512G
-#SBATCH --constraint=v100
+#SBATCH --constraint=a100,4gpus
 #SBATCH --time=00:30:00
 
 scontrol show job $SLURM_JOBID
