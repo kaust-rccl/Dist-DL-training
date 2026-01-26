@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
-#SBATCH --constraint=v100
+#SBATCH --constraint=a100,8gpus
 #SBATCH --cpus-per-task=32
 #SBATCH --time=01:00:00                	   # HH:MM:SS
 #SBATCH --mem=0 		           # Memory per node

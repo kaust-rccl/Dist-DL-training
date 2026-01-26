@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=8                                        # Number of CPU cores per task
 #SBATCH --gpus-per-node=2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
-#SBATCH --constraint=v100                                        # Constrain allocation to V100-equipped nodes
+#SBATCH --constraint=a100,4gpus                              # Request specific GPU Node (A100)
 #SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
 
@@ -37,8 +37,7 @@ mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACH
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-conda activate deepspeed-finetune
+module load /sw/rl9g/dl/workshop/modules/deepspeed
 module load cuda/12.4.1
 
 # ----------------------------
