@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=custom_weak_scaling_2                        
+#SBATCH --job-name=F-C-2G1N
 #SBATCH --output=logs/custom_weak_scaling_2_%j.out
 #SBATCH --error=logs/custom_weak_scaling_2_%j.err
 #SBATCH --ntasks=2		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
-#SBATCH --ntasks-per-node=2		           # Processes per node
+#SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus-per-node=2     		           # GPUs per node
 #SBATCH --constraint=v100
-#SBATCH --cpus-per-task=4		           # CPU cores per process
+#SBATCH --cpus-per-task=8		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=64G	                           # Memory per node
 
@@ -28,6 +28,14 @@ export WANDB_RUN_ID="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_NAME="${EXPERIMENT_NAME}_${SLURM_JOB_ID}"
 export WANDB_API_KEY=${WANDB_API_KEY}
 
+# Export caching to user space
+export HF_HOME=/ibex/user/$USER/.hf
+export TRANSFORMERS_CACHE=/ibex/user/$USER/.cache/huggingface/transformers
+export HF_DATASETS_CACHE=/ibex/user/$USER/.cache/huggingface/datasets
+export HF_MODULES_CACHE=/ibex/user/$USER/.cache/huggingface/modules
+export XDG_CACHE_HOME=/ibex/user/$USER/.cache
+mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+
 # Distributed setup
 echo "Init dist backend"
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
@@ -35,10 +43,10 @@ export MASTER_ADDR=${master_addr}
 export MASTER_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()') 
 export SLURM_GPUS_PER_NODE=2
 
-srun --nodes=1 --ntasks=1 --gpus=2 \
+srun --nodes=1 --ntasks=1 --gpus=${SLURM_GPUS_PER_NODE} \
      python -m torch.distributed.launch --use_env \
-       --nproc_per_node=2 \
-       --master_addr=$MASTER_ADDR --master_port=$MASTER_PORT \
+       --nproc_per_node=${SLURM_GPUS_PER_NODE} \
+       --rdzv_endpoint="${MASTER_ADDR}":"${MASTER_PORT}" \
        weak_scaling.py
 
 
