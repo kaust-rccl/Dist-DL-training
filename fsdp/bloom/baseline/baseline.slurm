@@ -13,8 +13,7 @@
 source env_vars.sh
 
 # Load and activate conda environment
-source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-conda activate ${CONDA_ENV}
+module load /sw/rl9g/dl/workshop/modules/fsdp
 
 # Setup Wandb online logging
 export WANDB_MODE=online
