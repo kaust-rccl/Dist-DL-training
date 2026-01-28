@@ -5,7 +5,8 @@
 #SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
-#SBATCH --constraint=a100
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
+#SBATCH --constraint=a100,4gpus
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
 

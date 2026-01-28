@@ -75,8 +75,8 @@ conversion pipeline.
 All import scripts in this repository include:
 
 ```bash
-#SBATCH --constraint=a100
-```
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
+#SBATCH --constraint=a100,4gpus```
 ---
 
 # 3. Authentication Before Running the Job (General)

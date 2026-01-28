@@ -263,7 +263,7 @@ At the top of the script, the `#SBATCH` directives request the hardware and runt
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
+#SBATCH --constraint=a100,4gpus
 #SBATCH --time=01:00:00
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
@@ -432,7 +432,7 @@ For example, to use **2 GPUs on a single node**:
 #SBATCH --ntasks-per-node=2
 #SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
+#SBATCH --constraint=a100,4gpus
 ```
 
 Key points:

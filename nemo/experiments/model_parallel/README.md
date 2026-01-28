@@ -331,8 +331,8 @@ The top of the script declares the number of GPUs you want SLURM to allocate:
 #SBATCH --ntasks-per-node=<total_gpus>
 #SBATCH --gpus-per-node=<total_gpus>
 #SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
-#SBATCH --time=08:00:00
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
+#SBATCH --constraint=a100,4gpus#SBATCH --time=08:00:00
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
 ```
