@@ -1,11 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=0Z-1G1N                    # Name of the job shown in SLURM queue
+#SBATCH --job-name=0Z-1G1N                     # Name of the job shown in SLURM queue
 #SBATCH --ntasks=1                             # Number of tasks
 #SBATCH --tasks-per-node=1                     # One task per node
 #SBATCH --cpus-per-task=4                      # Number of CPUs allocated per task
 #SBATCH --gpus=1                               # Request 1 GPU
 #SBATCH --gpus-per-node=1                      # GPUs per node
 #SBATCH --mem=32G                              # Request 32 GB of system memory
+#SBATCH --reservation=distributedDL_001        # Workshop reservation
 #SBATCH --constraint=a100,4gpus                # Request specific GPU Node (A100)
 #SBATCH --time=01:00:00                        # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                 # Redirect SLURM .out log to log/ directory

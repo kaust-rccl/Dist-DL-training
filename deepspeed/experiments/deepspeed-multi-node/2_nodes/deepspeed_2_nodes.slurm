@@ -3,12 +3,13 @@
 #SBATCH --nodes=2                                                # Number of nodes to allocate
 #SBATCH --ntasks=2                                               # Number of tasks
 #SBATCH --ntasks-per-node=1                                      # 2 tasks (process) per node
-#SBATCH --cpus-per-task=8                                       # Number of CPU cores per task
+#SBATCH --cpus-per-task=8                                        # Number of CPU cores per task
 #SBATCH --gpus-per-node=2                                        # 2 GPU per node
 #SBATCH --mem=32G                                                # Memory per node
-#SBATCH --constraint=a100,4gpus                              # Request specific GPU Node (A100)
+#SBATCH --reservation=distributedDL_001                          # Workshop reservation
+#SBATCH --constraint=a100,4gpus                                  # Request specific GPU Node (A100)
 #SBATCH --time=01:00:00                                          # Maximum runtime (HH:MM:SS)
-#SBATCH --output=log/%x-%j.out                          # Standard output log (%x=job name, %j=job ID)
+#SBATCH --output=log/%x-%j.out                                   # Standard output log (%x=job name, %j=job ID)
 
 # ------------------------------
 # Resolve directory paths
