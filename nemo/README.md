@@ -109,39 +109,7 @@ This track highlights:
 
 ---
 
-## 3. How the Two Main Folders Work Together
-
-The workflow across the `nemo/` top-level folder is:
-```text
-      ┌────────────────────────┐
-      │     models/ (import)   │
-      │  - import scripts      │
-      │  - base checkpoints    │
-      └─────────────┬──────────┘
-                    │
-                    ▼
-      ┌────────────────────────┐
-      │   experiments/         │
-      │  - DP (LoRA)           │
-      │  - MP (TP/EP)          │
-      │  runs read from models/│
-      └────────────────────────┘
-```
-- `models/` is used **once** to import each base model  
-- `experiments/` is used **many times** to run DP and MP training jobs  
-- Both share the same container, caching strategy, and overall workflow  
-
-This separation keeps the repo clean and avoids mixing:
-
-- heavy model checkpoints  
-- experimental outputs  
-- GPU logs  
-- SLURM logs  
-- per-configuration directories
-
----
-
-## 4. Recommended Workflow for Participants
+## 3. Recommended Workflow for Participants
 
 1. **Import models**  
    Go into `models/` and run the import scripts for LLaMA and Mixtral.
