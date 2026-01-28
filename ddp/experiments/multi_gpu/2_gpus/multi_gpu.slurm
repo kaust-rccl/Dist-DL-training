@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --constraint=a100,4gpus
+#SBATCH --reservation=distributedDL
 #SBATCH --time=00:30:00
 
 scontrol show job $SLURM_JOBID 

@@ -6,9 +6,8 @@
 #SBATCH --gpus=2                                             # Request 2 GPU
 #SBATCH --gpus-per-node=2                                    # 2 GPUs per node
 #SBATCH --mem=32G                                            # Request 32 GB of system memory
-#SBATCH --reservation=distributedDL_001                      # Workshop reservation
+#SBATCH --reservation=distributedDL                          # Workshop reservation
 #SBATCH --constraint=a100,4gpus                              # Request specific GPU Node (A100)
-#SBATCH --reservation=distributedDL_001                      # Workshop reservation
 #SBATCH --time=01:00:00                                      # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                               # Redirect SLURM .out log to log/ directory
 

@@ -6,6 +6,7 @@
 #SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus-per-node=2     		           # GPUs per node
 #SBATCH --constraint=a100,4gpus
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
 #SBATCH --cpus-per-task=8		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=64G	                           # Memory per node

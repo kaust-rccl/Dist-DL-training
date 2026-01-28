@@ -6,6 +6,7 @@
 #SBATCH --gpus=1                            	    # Total GPUs per node
 #SBATCH --gpus-per-node=1                   	    # GPUs allocated per node
 #SBATCH --constraint=a100,4gpus                   # Request specific GPU Node (A100)
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
 #SBATCH --cpus-per-task=4		                      # CPU cores per task
 #SBATCH --time=00:30:00                        	  # HH:MM:SS
 #SBATCH --mem=64G		                              # Total memory per node

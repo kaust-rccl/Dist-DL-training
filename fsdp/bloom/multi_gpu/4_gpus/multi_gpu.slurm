@@ -6,6 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
 #SBATCH --constraint=a100,4gpus
+#SBATCH --reservation=distributedDL_01            # Workshop reservation
 #SBATCH --cpus-per-task=16
 #SBATCH --time=01:00:00                	   # HH:MM:SS
 #SBATCH --mem=64G	                   # Memory per node
