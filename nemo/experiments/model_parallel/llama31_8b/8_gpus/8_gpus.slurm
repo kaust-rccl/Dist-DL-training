@@ -64,7 +64,7 @@ start_ts=$(date +%s)
 # ------------------------------
 # Run NeMo factory fine-tuning
 # ------------------------------
-srun singularity exec --nv /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
+srun singularity exec --nv -B /sw/rl9g:/sw/rl9g /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm finetune \
 --factory llama31_8b --yes \
 peft=none \

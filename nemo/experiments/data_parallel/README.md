@@ -362,7 +362,7 @@ batch size.
 To ensure consistent versions of CUDA, PyTorch, and NeMo, we run the CLI inside a container:
 
 ```bash
-singularity exec --nv <nemo_image.sif> nemo llm finetune ...
+singularity exec --nv -B /sw/rl9g:/sw/rl9g <nemo_image.sif> nemo llm finetune ...
 ```
 
 Using `--nv` exposes the host GPUs to the container.
@@ -370,7 +370,7 @@ Using `--nv` exposes the host GPUs to the container.
 In the SLURM script, this is wrapped with `srun` so it runs on the allocated GPU node:
 
 ```bash
-srun singularity exec --nv /path/to/nemo_image.sif \
+srun singularity exec --nv -B /sw/rl9g:/sw/rl9g /path/to/nemo_image.sif \
 nemo llm finetune --factory llama31_8b ...
 ```
 
