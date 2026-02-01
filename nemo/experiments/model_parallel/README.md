@@ -331,8 +331,8 @@ The top of the script declares the number of GPUs you want SLURM to allocate:
 #SBATCH --ntasks-per-node=<total_gpus>
 #SBATCH --gpus-per-node=<total_gpus>
 #SBATCH --cpus-per-task=4
-#SBATCH --reservation=distributedDL_01            # Workshop reservation
-#SBATCH --constraint=a100,4gpus#SBATCH --time=08:00:00
+#SBATCH --constraint=a100,4gpus
+#SBATCH --time=08:00:00
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
 ```
@@ -429,7 +429,7 @@ batch size.
 To ensure consistent versions of CUDA, PyTorch, and NeMo, we run the CLI inside a container:
 
 ```bash
-singularity exec --nv -B /sw/rl9g:/sw/rl9g <nemo_image.sif> nemo llm finetune ...
+singularity exec --nv <nemo_image.sif> nemo llm finetune ...
 ```
 
 Using `--nv` exposes the host GPUs to the container.
@@ -437,7 +437,7 @@ Using `--nv` exposes the host GPUs to the container.
 In the SLURM script, this is wrapped with `srun` so it runs on the allocated GPU node:
 
 ```bash
-srun singularity exec --nv -B /sw/rl9g:/sw/rl9g /path/to/nemo_image.sif \
+srun singularity exec --nv /path/to/nemo_image.sif \
 nemo llm finetune --factory llama31_8b ...
 ```
 
