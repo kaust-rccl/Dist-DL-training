@@ -31,7 +31,7 @@ module load singularity
 
 export HF_TOKEN="<YOUR_HF_TOKEN>"
 
-srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
+srun singularity exec --nv /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm import \
 model=llama31_8b \
 source="hf://meta-llama/Llama-3.1-8B" \

@@ -20,7 +20,7 @@ GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/${SLURM_JOB_ID}"
 mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MEMORY_SCRIPT_DIR="$NEMO_ROOT_DIR/experiments/helper_scripts"
-MODEL_DIR="$NEMO_ROOT_DIR/models/mixtral_8x7b/model"
+MODEL_DIR="/sw/rl9g/dl/workshop/models/mixtral/model/"
 CACHE_DIR="$NEMO_ROOT_DIR/.cache"
 mkdir -p "$CACHE_DIR"
 
@@ -64,7 +64,7 @@ start_ts=$(date +%s)
 # ------------------------------
 # Run NeMo factory fine-tuning
 # ------------------------------
-srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
+srun singularity exec --nv /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm finetune \
 --factory mixtral_8x7b --yes \
 trainer.devices="${SLURM_GPUS_PER_NODE}" \

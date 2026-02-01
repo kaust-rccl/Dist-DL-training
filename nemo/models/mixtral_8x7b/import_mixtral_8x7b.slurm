@@ -31,7 +31,7 @@ module load singularity
 
 export HF_TOKEN="<YOUR_HF_TOKEN>"
 
-srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
+srun singularity exec --nv /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm import \
 model=mixtral_8x7b \
 source="hf://mistralai/Mixtral-8x7B-v0.1" \
