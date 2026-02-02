@@ -4,27 +4,26 @@
 
 This guide is designed to help workshop participants **submit all DeepSpeed experiment jobs early in the session**, allowing sufficient time for jobs to queue, start, and complete while the workshop progresses.
 
-Since several experiments involve **GPU- and multi-node allocations**, submitting jobs at the beginning of the workshop ensures that:
-- Participants can continue following the theoretical and hands-on discussions without interruption
-- Results are available in time for analysis, comparison, and discussion
-- Cluster resources are utilized efficiently throughout the session
 
-By following this guide, participants can focus on **learning and interpreting results**, rather than waiting for jobs to start.
 
 ---
 
-## ⚠️ Important rule:
+## Working Directory Context
 
-Make sure you start from [experiments](.) dir.
-
----
-
-## Track your submissions (recommended)
-
-Keep this running in a separate terminal tab while submitting jobs.
+All commands in this guide assume that you start from the [experiments/](.) directory.
 
 ```commandline
-watch squeue --me
+cd experiments
+```
+
+---
+
+## Track Your Submissions
+
+You can check the status of your submitted jobs at any time using:
+
+```commandline
+squeue --me
 ```
 
 ### What this shows
@@ -177,3 +176,15 @@ cd deepspeed-multi-node/8_nodes
 sbatch deepspeed_8_nodes.slurm
 cd -
 ```
+
+## Conclusion
+
+After submitting the jobs, participants are expected to **periodically check their job status** using the provided SLURM commands.
+
+Once the workshop reaches the results analysis phase, please return to the **generated log files and outputs** corresponding to each experiment. These logs will be used to:
+- Analyze performance and scaling behavior
+- Compare DeepSpeed configurations and ZeRO stages
+- Discuss trade-offs observed across single-GPU, multi-GPU, and multi-node runs
+
+Having jobs submitted early and tracking their progress ensures that **meaningful results are available for discussion** by the end of the session.
+
