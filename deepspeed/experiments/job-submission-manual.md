@@ -75,7 +75,7 @@ cd -
 ```
 ---
 
-## 4) Multi-GPU scaling (2 → 4 → 8 GPUs)
+## 3) Multi-GPU scaling (2 → 4 → 8 GPUs)
 
 This section corresponds to Exercise: [Scaling on Multi GPUs](../README.md#part-1-scaling-on-multi-gpu-setup)
 
@@ -105,7 +105,7 @@ cd -
 
 ---
 
-## 3) 2 GPUs — stages comparison
+## 4) 2 GPUs — stages comparison
 
 This section corresponds to Exercise: [2 GPUs Zero Stages Comparison](../README.md#part-2-2-gpu-zero-stage-comparison)
 
