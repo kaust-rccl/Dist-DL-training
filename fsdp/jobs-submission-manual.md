@@ -12,14 +12,14 @@ results as jobs finish.
 
 ## Working Directory Context
 
-All commands in this guide assume that you start from the root experiments directory, which contains `bloom/`,
+All commands in this guide assume that you start from the root [`fsdp`](.) directory, which contains `bloom/`,
 `custom_model/`, and the root `README.md`.
 
 ### ⚠️ Important rule
 
 - Every job must be submitted from inside its own directory
 
-- Always return to the experiments directory after each submission using cd -
+- Always return to the [`fsdp`](.) directory after each submission using cd -
 
 --- 
 
