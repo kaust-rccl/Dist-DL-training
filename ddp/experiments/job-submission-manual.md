@@ -1,25 +1,30 @@
-# Submit Jobs Manual
+# Jobs Submission Manual
 
-## ⚠️ Important rule
+## Purpose of This Guide
 
-Make sure you start from the [`experiments`](.) directory.
+This guide is designed to help workshop participants **submit all DDP experiment jobs early in the session**,
+allowing sufficient time for jobs to queue, start, and complete while the workshop progresses.
 
-```commandline
-pwd
-```
 
-All jobs must be submitted from inside their own directory, and you must return to the experiments directory after each
-submission.
 
 ---
 
-## Track your submissions (recommended)
+## Working Directory Context
 
-Keep this running in a separate terminal tab while submitting jobs.
+All commands in this guide assume that you start from the [experiments/](.) directory.
 
 ```commandline
+cd experiments
+```
 
-watch squeue --me
+---
+
+## Track Your Submissions
+
+You can check the status of your submitted jobs at any time using:
+
+```commandline
+squeue --me
 ```
 
 ### What this shows
@@ -105,3 +110,20 @@ cd multi_node/8_nodes
 sbatch multi_node.slurm
 cd -
 ```
+
+---
+
+## Conclusion
+
+After submitting the jobs, participants are expected to **periodically check their job status** using the provided SLURM
+commands.
+
+Once the workshop reaches the results analysis phase, please return to the **generated log files and outputs**
+corresponding to each experiment. These logs will be used to:
+
+- Analyze performance and scaling behavior
+- Analyze performance and scaling behavior
+- Discuss trade-offs observed across single-GPU, multi-GPU, and multi-node runs
+
+Having jobs submitted early and tracking their progress ensures that **meaningful results are available for discussion**
+by the end of the session.
