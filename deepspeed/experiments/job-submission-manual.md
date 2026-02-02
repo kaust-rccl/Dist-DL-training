@@ -1,4 +1,17 @@
-# Submit Jobs Manual
+# Jobs Submission Manual
+
+## Purpose of This Guide
+
+This guide is designed to help workshop participants **submit all DeepSpeed experiment jobs early in the session**, allowing sufficient time for jobs to queue, start, and complete while the workshop progresses.
+
+Since several experiments involve **GPU- and multi-node allocations**, submitting jobs at the beginning of the workshop ensures that:
+- Participants can continue following the theoretical and hands-on discussions without interruption
+- Results are available in time for analysis, comparison, and discussion
+- Cluster resources are utilized efficiently throughout the session
+
+By following this guide, participants can focus on **learning and interpreting results**, rather than waiting for jobs to start.
+
+---
 
 ## ⚠️ Important rule:
 
