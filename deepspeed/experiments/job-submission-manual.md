@@ -11,7 +11,7 @@ Make sure you start from [experiments](.) dir.
 Keep this running in a separate terminal tab while submitting jobs.
 
 ```commandline
-watch -n squeue --me
+watch squeue --me
 ```
 
 ### What this shows
