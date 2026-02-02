@@ -213,7 +213,7 @@ As part of this workshop, your task is to **run the baseline fine-tuning experim
 
 This exercise helps you develop a habit of tracking key metrics like training loss, evaluation loss, and throughput — which are essential for understanding and debugging model training.
 
-## Part 1: Run the Baseline Fine-Tuning Job
+## Run the Baseline Fine-Tuning Job
 ### Steps:
 
 1. Navigate to the baseline directory:  
