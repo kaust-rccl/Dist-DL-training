@@ -11,14 +11,26 @@ and *how* to run it efficiently on IBEX.
 
 ## Quick start
 
-1. **Complete the prerequisites**
-    - Start with the instructions in [`prerequisites/`](./prerequisites)
+1. **Complete the prerequisites** 
 
-2. **Choose a training module**
-    - New to distributed training? Start with [`ddp/`](ddp)
-    - Interested in memory sharding and optimizer scaling? Try [`fsdp/`](./fsdp) or [`deepspeed/`](./deepspeed)
-    - Prefer config-driven, recipe-style training? Go to [`nemo/`](./nemo)
+    Start with the instructions in [`prerequisites/`](./prerequisites)
+  
+    These steps **must be completed before the workshop starts**.
 
+
+2. **Submit jobs early using the Job Submission Manual** (during workshop)
+    - For **faster and smoother workshops**, each major module includes a
+      **Job Submission Manual** designed to help you:
+        - submit *all* experiment jobs at the beginning of the session
+        - allow jobs time to queue and run while the workshop continues
+        - have results ready for analysis later
+    - You will find a Job Submission Manual inside:
+        - [`ddp/experiments`](ddp/experiments/job-submission-manual.md)
+        - [`fsdp/`](fsdp/jobs-submission-manual.md)
+        - [`deepspeed/`](deepspeed/experiments/job-submission-manual.md)
+        - [`nemo/`](nemo/experiments/job-submission-manual.md)
+      
+    **At the beginning of the workshop, open the module’s Job Submission Manual and submit all jobs first.**
 ---
 
 ## Repository navigation
