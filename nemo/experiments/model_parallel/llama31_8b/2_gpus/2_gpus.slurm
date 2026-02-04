@@ -41,6 +41,7 @@ mkdir -p "$TORCH_HOME" "$NEMO_DATASETS_CACHE" "$HF_HOME" "$HF_DATASETS_CACHE" "$
 # ------------------------------
 module load cuda/12.4.1
 module load singularity
+module load panda3
 
 # ------------------------------
 # Monitoring GPU usage

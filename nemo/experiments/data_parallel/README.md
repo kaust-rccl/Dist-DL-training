@@ -309,7 +309,7 @@ Ibex requires loading the correct environment modules before container execution
 ```bash
 module load cuda/12.4.1
 module load singularity
-```
+module load panda3```
 
 This ensures that GPU passthrough and CUDA bindings work correctly.
 
