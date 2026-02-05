@@ -35,5 +35,5 @@ Inside the cluster environment, export your key before starting training
 To export it in all scripts at once run:
 ```commandline
 cd ../../fsdp
-wandb_api_key.sh <YOUR_WANDB_API_KEY>
+./wandb_api_key.sh <YOUR_WANDB_API_KEY>
 ```

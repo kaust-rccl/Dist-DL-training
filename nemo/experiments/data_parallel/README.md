@@ -263,7 +263,7 @@ At the top of the script, the `#SBATCH` directives request the hardware and runt
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
+#SBATCH --constraint=a100,4gpus
 #SBATCH --time=01:00:00
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
@@ -309,7 +309,7 @@ Ibex requires loading the correct environment modules before container execution
 ```bash
 module load cuda/12.4.1
 module load singularity
-```
+module load panda3```
 
 This ensures that GPU passthrough and CUDA bindings work correctly.
 
@@ -362,7 +362,7 @@ batch size.
 To ensure consistent versions of CUDA, PyTorch, and NeMo, we run the CLI inside a container:
 
 ```bash
-singularity exec --nv <nemo_image.sif> nemo llm finetune ...
+singularity exec --nv -B /sw/rl9g:/sw/rl9g <nemo_image.sif> nemo llm finetune ...
 ```
 
 Using `--nv` exposes the host GPUs to the container.
@@ -370,7 +370,7 @@ Using `--nv` exposes the host GPUs to the container.
 In the SLURM script, this is wrapped with `srun` so it runs on the allocated GPU node:
 
 ```bash
-srun singularity exec --nv /path/to/nemo_image.sif \
+srun singularity exec --nv -B /sw/rl9g:/sw/rl9g /path/to/nemo_image.sif \
 nemo llm finetune --factory llama31_8b ...
 ```
 
@@ -432,7 +432,7 @@ For example, to use **2 GPUs on a single node**:
 #SBATCH --ntasks-per-node=2
 #SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=4
-#SBATCH --constraint=a100
+#SBATCH --constraint=a100,4gpus
 ```
 
 Key points:

@@ -4,7 +4,8 @@
 #SBATCH --ntasks=1		                   # Total processes (should equal GPUS_PER_NODE * NNODES)
 #SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus-per-node=8		           # GPUs per node
-#SBATCH --constraint=v100
+#SBATCH --constraint=a100,8gpus
+#SBATCH --reservation=distributedDL_001           # Workshop reservation
 #SBATCH --cpus-per-task=32		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=0		                           # Memory per node
@@ -12,9 +13,8 @@
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-source $torch_fsdpenv
-conda activate ${CONDA_ENV}
+module load dl-workshops fsdp
+
 
 # Wandb online logging
 export WANDB_MODE=online

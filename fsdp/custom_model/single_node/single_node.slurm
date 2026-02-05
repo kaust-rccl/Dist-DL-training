@@ -5,7 +5,8 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
-#SBATCH --constraint=v100
+#SBATCH --constraint=a100,4gpus
+#SBATCH --reservation=distributedDL_001           # Workshop reservation
 #SBATCH --cpus-per-task=4		         # CPU cores per task
 #SBATCH --time=00:30:00	                         # HH:MM:SS
 #SBATCH --mem=64G		                 # Memory per node
@@ -13,8 +14,7 @@
 source env_vars.sh
 
 # Activate environment
-source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-conda activate ${CONDA_ENV}
+module load dl-workshops fsdp
 
 # Setup Wandb online logging
 export WANDB_MODE=online

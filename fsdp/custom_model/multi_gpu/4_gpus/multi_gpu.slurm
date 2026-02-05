@@ -5,7 +5,8 @@
 #SBATCH --ntasks-per-node=1		           # Processes per node
 #SBATCH --gpus=4                                   # Total GPUs
 #SBATCH --gpus-per-node=4		           # GPUs per node
-#SBATCH --constraint=v100
+#SBATCH --constraint=a100,4gpus
+#SBATCH --reservation=distributedDL_001           # Workshop reservation
 #SBATCH --cpus-per-task=16		           # CPU cores per process
 #SBATCH --time=00:30:00	                           # HH:MM:SS
 #SBATCH --mem=64G		                   # Memory per node
@@ -13,9 +14,8 @@
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-source $torch_fsdpenv
-conda activate ${CONDA_ENV}
+module load dl-workshops fsdp
+
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 

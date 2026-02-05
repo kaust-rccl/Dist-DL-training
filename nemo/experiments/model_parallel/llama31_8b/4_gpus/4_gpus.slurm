@@ -5,7 +5,8 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
-#SBATCH --constraint=a100
+#SBATCH --reservation=distributedDL_001           # Workshop reservation
+#SBATCH --constraint=a100,4gpus
 #SBATCH --mem=256G
 #SBATCH --output=logs/%x-%j.out
 
@@ -19,7 +20,7 @@ GPU_LOG_DIR="$SCRIPT_DIR/gpu_memory/${SLURM_JOB_ID}"
 mkdir -p "$GPU_LOG_DIR"
 NEMO_ROOT_DIR="$( cd "$SCRIPT_DIR/../../../.." && pwd )"
 MEMORY_SCRIPT_DIR="$NEMO_ROOT_DIR/experiments/helper_scripts"
-MODEL_DIR="$NEMO_ROOT_DIR/models/llama31_8b/model"
+MODEL_DIR="/sw/rl9g/dl/workshop/models/llama/model/"
 CACHE_DIR="$NEMO_ROOT_DIR/.cache"
 mkdir -p "$CACHE_DIR"
 
@@ -40,6 +41,7 @@ mkdir -p "$TORCH_HOME" "$NEMO_DATASETS_CACHE" "$HF_HOME" "$HF_DATASETS_CACHE" "$
 # ------------------------------
 module load cuda/12.4.1
 module load singularity
+module load panda3
 
 # ------------------------------
 # Monitoring GPU usage
@@ -63,7 +65,7 @@ start_ts=$(date +%s)
 # ------------------------------
 # Run NeMo factory fine-tuning
 # ------------------------------
-srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
+srun singularity exec --nv -B /sw/rl9g:/sw/rl9g /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm finetune \
 --factory llama31_8b --yes \
 peft=none \

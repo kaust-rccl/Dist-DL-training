@@ -5,8 +5,8 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=01:00:00
-#SBATCH --constraint=a100
-#SBATCH --mem=160G
+#SBATCH --reservation=distributedDL_001           # Workshop reservation
+#SBATCH --constraint=a100,4gpus#SBATCH --mem=160G
 #SBATCH --output=logs/%x-%j.out
 
 SCRIPT_PATH=$(scontrol show job "$SLURM_JOB_ID" | awk -F= '/Command=/{print $2}')
@@ -27,10 +27,10 @@ mkdir -p "$TORCH_HOME" "$NEMO_DATASETS_CACHE" "$HF_HOME" "$HF_DATASETS_CACHE" "$
 
 module load cuda/12.4.1
 module load singularity
-
+module load panda3
 export HF_TOKEN="<YOUR_HF_TOKEN>"
 
-srun singularity exec --nv /ibex/user/x_mohameta/nemo/image/nemo_25.07.sif \
+srun singularity exec --nv /sw/rl9g/dl/workshop/image/nemo_25.07.sif \
 nemo llm import \
 model=<NEMO_MODEL_NAME> \
 source="hf://<hf-org>/<hf-model-name>" \

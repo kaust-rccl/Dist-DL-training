@@ -6,7 +6,8 @@
 #SBATCH --gpus=1                               # Request 1 GPU
 #SBATCH --gpus-per-node=1                      # GPUs per node
 #SBATCH --mem=32G                              # Request 32 GB of system memory
-#SBATCH --constraint=v100                      # Request specific GPU type (V100)
+#SBATCH --reservation=distributedDL            # Workshop reservation
+#SBATCH --constraint=a100,4gpus                # Request specific GPU Node (A100)
 #SBATCH --time=01:00:00                        # Maximum runtime (HH:MM:SS)
 #SBATCH --output=log/%x-%j.out                 # Redirect SLURM .out log to log/ directory
 
@@ -36,9 +37,7 @@ mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACH
 # ------------------------------
 # Environment Setup
 # ------------------------------
-source /ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-conda activate deepspeed-finetune
-module load cuda/12.4.1
+module load dl-workshops deepspeed
 
 # ------------------------------
 # GPU Memory Logging

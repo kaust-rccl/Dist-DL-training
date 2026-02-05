@@ -75,7 +75,7 @@ conversion pipeline.
 All import scripts in this repository include:
 
 ```bash
-#SBATCH --constraint=a100
+#SBATCH --constraint=a100,4gpus
 ```
 ---
 
