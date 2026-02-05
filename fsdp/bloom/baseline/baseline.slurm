@@ -14,7 +14,7 @@
 source env_vars.sh
 
 # Load and activate conda environment
-module load /sw/rl9g/dl/workshop/modules/fsdp
+module load dl-workshops fsdp
 
 # Setup Wandb online logging
 export WANDB_MODE=online

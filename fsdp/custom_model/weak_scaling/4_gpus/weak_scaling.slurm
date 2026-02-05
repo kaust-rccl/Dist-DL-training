@@ -13,9 +13,8 @@
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-source $torch_fsdpenv
-conda activate ${CONDA_ENV}
+module load dl-workshops fsdp
+
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 

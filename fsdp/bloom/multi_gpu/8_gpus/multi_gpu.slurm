@@ -14,7 +14,7 @@
 source env_vars.sh
 
 # Activate environment
-module load /sw/rl9g/dl/workshop/modules/fsdp
+module load dl-workshops fsdp
 
 # Wandb online logging
 export WANDB_MODE=online

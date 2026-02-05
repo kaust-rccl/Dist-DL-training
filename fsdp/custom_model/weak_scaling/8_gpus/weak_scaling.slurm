@@ -13,9 +13,8 @@
 source env_vars.sh
 
 # Activate environment
-torch_fsdpenv=/ibex/user/$USER/miniforge/etc/profile.d/conda.sh
-source $torch_fsdpenv
-conda activate ${CONDA_ENV}
+module load dl-workshops fsdp
+
 
 # Wandb online logging
 export WANDB_MODE=online

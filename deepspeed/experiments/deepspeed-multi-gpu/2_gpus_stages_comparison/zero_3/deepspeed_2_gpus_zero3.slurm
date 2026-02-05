@@ -37,9 +37,7 @@ mkdir -p "$HF_HOME" "$TRANSFORMERS_CACHE" "$HF_DATASETS_CACHE" "$HF_MODULES_CACH
 # ------------------------------
 # Environment Setup
 # ------------------------------
-module load /sw/rl9g/dl/workshop/modules/deepspeed
-module load cuda/12.4.1
-
+module load dl-workshops deepspeed
 # ------------------------------
 # GPU Memory Logging
 # ------------------------------

@@ -14,7 +14,7 @@
 source env_vars.sh
 
 # Activate environment
-module load /sw/rl9g/dl/workshop/modules/fsdp
+module load dl-workshops fsdp
 
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 

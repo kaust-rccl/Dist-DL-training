@@ -14,8 +14,7 @@
 
 scontrol show job $SLURM_JOBID
 
-#source /ibex/ai/home/$USER/miniconda3/bin/activate dist-pytorch
-module load dl pytorch
+module load dl-workshops ddp
 
 export NCCL_DEBUG=INFO
 export NCCL_SOCKET_IFNAME=ib0
@@ -23,7 +22,6 @@ export PYTHONFAULTHANDLER=1
 EXPERIMENT_DIR=$PWD
 
 export SCRIPTS_DIR="../../../scripts"
-#export DATA_DIR=/ibex/ai/reference/CV/ILSVR/classification-localization/data/jpeg
 export DATA_DIR=/ibex/ai/reference/CV/tinyimagenet
 GPU_LOG_DIR="$EXPERIMENT_DIR/gpu_memory/${SLURM_JOB_ID}"
 
