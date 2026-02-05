@@ -51,6 +51,19 @@ Participants are encouraged to periodically check this output while the workshop
 
 ---
 
+## Before Submitting Any Jobs — Configure Your W&B API Key
+
+All experiments rely on Weights & Biases (W&B) for logging.
+Before submitting any jobs, you must inject your personal `WANDB_API_KEY` into all `env_vars.sh` files.
+
+A helper script is provided to update everything at once.
+
+```commandline
+./wandb_update.sh <your_wandb_api_key>``
+```
+
+---
+
 ## 1) BLOOM — Baseline (Single GPU)
 
 This section corresponds to Exercise: [BLOOM Baseline Training](./README.md#run-the-baseline-fine-tuning-job)
@@ -65,7 +78,8 @@ cd -
 
 ## 2) BLOOM — Multi-GPU Scaling (2 → 4 → 8 GPUs)
 
-This section corresponds to Exercise: [BLOOM Multi-GPU Scaling](./README.md#-exercise-run-multi-gpu-experiments-and-populate-results-table)
+This section corresponds to
+Exercise: [BLOOM Multi-GPU Scaling](./README.md#-exercise-run-multi-gpu-experiments-and-populate-results-table)
 
 ### 2 GPUs
 
@@ -95,7 +109,8 @@ cd -
 
 ## 3) BLOOM — Multi-Node Scaling (2 → 4 → 8 Nodes)
 
-This section corresponds to Exercise: [BLOOM Multi-Node Scaling](./README.md#-exercise-run-multi-node-experiments-and-populate-results-table)
+This section corresponds to
+Exercise: [BLOOM Multi-Node Scaling](./README.md#-exercise-run-multi-node-experiments-and-populate-results-table)
 
 ## 2 nodes
 
@@ -125,7 +140,8 @@ cd -
 
 ## 4) Custom Model — Single Node
 
-This section corresponds to Exercise: [Custom Model: Single-Node Training](./README.md#exercise-run-the-custom-model-fine-tuning-job)
+This section corresponds to
+Exercise: [Custom Model: Single-Node Training](./README.md#exercise-run-the-custom-model-fine-tuning-job)
 
 ```commandline
 cd custom_model/single_node
@@ -137,7 +153,8 @@ cd -
 
 ## 5) Custom Model — Multi-GPU Scaling (2 → 4 → 8 GPUs)
 
-This section corresponds to Exercise: [Custom Model: Multi-GPU Scaling](./README.md#-exercise-run-multi-gpu-experiments-and-populate-results-table-1)
+This section corresponds to
+Exercise: [Custom Model: Multi-GPU Scaling](./README.md#-exercise-run-multi-gpu-experiments-and-populate-results-table-1)
 
 ### 2 GPUs
 
@@ -167,7 +184,8 @@ cd -
 
 ## 6) Custom Model — Multi-Node Scaling (2 → 4 → 8 Nodes)
 
-This section corresponds to Exercise: [Custom Model: Multi-Node Scaling](./README.md#-exercise-run-multi-node-experiments-and-populate-results-table-1)
+This section corresponds to
+Exercise: [Custom Model: Multi-Node Scaling](./README.md#-exercise-run-multi-node-experiments-and-populate-results-table-1)
 
 ### 2 nodes
 
@@ -197,34 +215,46 @@ cd -
 
 ## 7) Custom Model — Weak Scaling (2 → 4 → 8 GPUs)
 
-This section corresponds to Exercise: [Custom Model: Weak Scaling Study](./README.md#-exercise-run-weak-scaling-experiments-and-populate-results)
+This section corresponds to
+Exercise: [Custom Model: Weak Scaling Study](./README.md#-exercise-run-weak-scaling-experiments-and-populate-results)
 
 ### 2 GPUs
+
 ```commandline
 cd custom_model/weak_scaling/2_gpus
 sbatch weak_scaling.slurm
 cd -
 ```
+
 ### 4 GPUs
+
 ```commandline
 cd custom_model/weak_scaling/4_gpus
 sbatch weak_scaling.slurm
 cd -
 ```
+
 ### 8 GPUs
+
 ```commandline
 cd custom_model/weak_scaling/8_gpus
 sbatch weak_scaling.slurm
 cd -
 ```
+
 --- 
 
 ## Conclusion
-After submitting the jobs, participants are expected to **periodically check their job status** using the provided SLURM commands.
 
-Once the workshop reaches the results analysis phase, please return to the **generated log files and outputs** corresponding to each experiment. These logs will be used to:
+After submitting the jobs, participants are expected to **periodically check their job status** using the provided SLURM
+commands.
+
+Once the workshop reaches the results analysis phase, please return to the **generated log files and outputs**
+corresponding to each experiment. These logs will be used to:
+
 - Analyze performance and scaling behavior
 - Discuss trade-offs observed across single-GPU, multi-GPU, and multi-node runs
 
-Having jobs submitted early and tracking their progress ensures that **meaningful results are available for discussion** by the end of the session.
+Having jobs submitted early and tracking their progress ensures that **meaningful results are available for discussion**
+by the end of the session.
 
