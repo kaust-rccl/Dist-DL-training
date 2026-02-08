@@ -53,12 +53,11 @@ export WORLD_SIZE=$(( ${#nodes_array[@]} * 1 ))
 
 # Avoid CPU over-subscription inside every rank
 export OMP_NUM_THREADS=1
-CPUS_PER_TASK=$(( SLURM_CPUS_PER_TASK / SLURM_NNODES ))
 
 for (( i=0; i<${SLURM_JOB_NUM_NODES}; i++ )); do
     srun --nodes=1 --ntasks=1 \
          --gpus=${SLURM_GPUS_PER_NODE} \
-         --cpus-per-task=$CPUS_PER_TASK \
+         --cpus-per-task=${SLURM_CPUS_PER_TASK}  \
          -w ${nodes_array[$i]} \
          python -m torch.distributed.launch --use_env \
             --nproc_per_node=${SLURM_GPUS_PER_NODE} \

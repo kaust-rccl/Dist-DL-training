@@ -58,7 +58,7 @@ model, tokenizer = load_model()
 # Labels are aligned with input_ids for causal LM training.
 
 # Base number of samples per GPU
-base_size_per_gpu = 10000
+base_size_per_gpu = 500
 
 # Total number of processes (GPUs) across all nodes
 world_size = dist.get_world_size()
